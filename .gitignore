@@ -1,0 +1,6 @@
+node_modules/
+.next/
+.env
+.env.local
+firebase-debug.log
+firebase.json.backup
