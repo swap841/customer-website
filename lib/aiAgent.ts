@@ -67,7 +67,7 @@ const patterns: { keywords: string[]; response: string; steps: string[] }[] = [
       "Look under **Current Orders**",
       "Click on any order to see its **live status**",
       "You'll see the progress: Pending → Packing → Out for Delivery → Delivered",
-      "If assigned to a delivery boy, you can see their real-time location",
+      "If assigned for delivery, you can see their real-time location",
     ],
   },
   {

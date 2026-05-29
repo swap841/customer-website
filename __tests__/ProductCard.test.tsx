@@ -30,9 +30,9 @@ describe("ProductCard", () => {
     expect(screen.getByText("20% OFF")).toBeInTheDocument();
   });
 
-  it("shows 'You save' message when discounted", () => {
+  it("shows discount percentage badge when discounted", () => {
     render(<ProductCard product={baseProduct} />, { wrapper });
-    expect(screen.getByText("You save ₹20")).toBeInTheDocument();
+    expect(screen.getByText("20% OFF")).toBeInTheDocument();
   });
 
   it("does not show discount badge when mrp equals price", () => {

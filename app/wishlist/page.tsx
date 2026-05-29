@@ -8,7 +8,7 @@ import { useWishlist } from "@/hooks/useWishlist";
 import ProductCard from "@/components/ProductCard";
 import { Heart, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
-import type { Product } from "../../../shared/models";
+import type { Product } from "@/shared/models";
 
 export default function WishlistPage() {
   const { wishlistIds, loading: wishlistLoading } = useWishlist();

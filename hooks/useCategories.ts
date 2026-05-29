@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
-import type { Category } from "../../shared/models";
+import type { Category } from "@/shared/models";
 
 function mapDoc<T>(d: { id: string; data(): unknown }): T {
   return { id: d.id, ...(d.data() as object) } as T;

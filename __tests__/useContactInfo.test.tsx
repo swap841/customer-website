@@ -1,18 +1,29 @@
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useContactInfo } from "@/hooks/useContactInfo";
-
-const mockGetDoc = jest.fn();
-const mockDoc = jest.fn();
+import { doc, getDoc } from "firebase/firestore";
+import type { ReactNode } from "react";
 
 jest.mock("firebase/firestore", () => ({
-  doc: (...args: any[]) => mockDoc(...args),
-  getDoc: (...args: any[]) => mockGetDoc(...args),
+  doc: jest.fn(),
+  getDoc: jest.fn(),
   getFirestore: jest.fn(() => ({})),
 }));
 
 jest.mock("@/lib/firebaseClient", () => ({
   db: {},
 }));
+
+const mockDoc = doc as jest.Mock;
+const mockGetDoc = getDoc as jest.Mock;
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+);
 
 const MOCK_CONTACT = {
   phone: "+91 99999 88888",
@@ -28,11 +39,12 @@ const MOCK_CONTACT = {
 describe("useContactInfo", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    queryClient.clear();
   });
 
   it("starts in loading state", () => {
     mockGetDoc.mockReturnValue(new Promise(() => {}));
-    const { result } = renderHook(() => useContactInfo());
+    const { result } = renderHook(() => useContactInfo(), { wrapper });
     expect(result.current.loading).toBe(true);
   });
 
@@ -42,7 +54,7 @@ describe("useContactInfo", () => {
       data: () => MOCK_CONTACT,
     });
 
-    const { result } = renderHook(() => useContactInfo());
+    const { result } = renderHook(() => useContactInfo(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -57,7 +69,7 @@ describe("useContactInfo", () => {
       data: () => undefined,
     });
 
-    const { result } = renderHook(() => useContactInfo());
+    const { result } = renderHook(() => useContactInfo(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -68,7 +80,7 @@ describe("useContactInfo", () => {
   it("falls back to defaults on error", async () => {
     mockGetDoc.mockRejectedValue(new Error("network error"));
 
-    const { result } = renderHook(() => useContactInfo());
+    const { result } = renderHook(() => useContactInfo(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -81,7 +93,7 @@ describe("useContactInfo", () => {
       data: () => ({ phone: "+91 11111 22222" }),
     });
 
-    const { result } = renderHook(() => useContactInfo());
+    const { result } = renderHook(() => useContactInfo(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 

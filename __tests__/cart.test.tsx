@@ -137,8 +137,8 @@ describe("CartContext", () => {
 
       expect(result.current.subtotal).toBe(10);
       expect(result.current.deliveryCharge).toBe(25);
-      expect(result.current.smallCartCharge).toBe(20);
-      expect(result.current.grandTotal).toBe(10 + 25 + 2 + 20);
+      expect(result.current.taxAmount).toBe(1); // 5% of 10 = 0.5, rounded to 1
+      expect(result.current.grandTotal).toBe(10 + 25 + 1);
     });
 
     it("waives delivery charge when subtotal >= 100", () => {
@@ -149,14 +149,8 @@ describe("CartContext", () => {
 
       expect(result.current.subtotal).toBe(100);
       expect(result.current.deliveryCharge).toBe(0);
-      expect(result.current.smallCartCharge).toBe(0);
-      expect(result.current.grandTotal).toBe(100 + 0 + 2 + 0);
-    });
-
-    it("always includes handling charge", () => {
-      const { result } = renderHook(() => useCart(), { wrapper });
-
-      expect(result.current.handlingCharge).toBe(2);
+      expect(result.current.taxAmount).toBe(5); // 5% of 100
+      expect(result.current.grandTotal).toBe(100 + 0 + 5);
     });
   });
 });

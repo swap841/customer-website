@@ -360,7 +360,7 @@ export default function OrderSuccessClient() {
               </div>
               {order.thirdPartyDeliveryCharge ? (
                 <div className="flex justify-between">
-                  <p>Third-party fee</p>
+                  <p>Extended delivery fee</p>
                   <p>₹{order.thirdPartyDeliveryCharge}</p>
                 </div>
               ) : null}

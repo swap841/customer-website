@@ -3,13 +3,14 @@ import { db } from '@/lib/firebase';
 
 export interface Coupon {
   code: string;
-  discountType: 'flat' | 'percent';
-  value: number;
-  minOrderValue: number;
-  expiresAt: Date;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minOrderAmount: number;
+  maxDiscount?: number;
+  expiryDate: Date;
   usageLimit: number;
   usedCount: number;
-  isActive: boolean;
+  active: boolean;
 }
 
 export interface ValidationResult {
@@ -31,43 +32,52 @@ export async function validateCoupon(
       return { valid: false, error: 'Coupon code not found' };
     }
 
-    const coupon = couponSnap.data() as Coupon;
+    const data = couponSnap.data();
+    const coupon: Coupon = {
+      code: couponSnap.id,
+      discountType: data.discountType || 'percentage',
+      discountValue: data.discountValue || 0,
+      minOrderAmount: data.minOrderAmount || 0,
+      maxDiscount: data.maxDiscount,
+      expiryDate: data.expiryDate instanceof Date ? data.expiryDate : new Date(data.expiryDate?.seconds ? data.expiryDate.seconds * 1000 : data.expiryDate),
+      usageLimit: data.usageLimit || 0,
+      usedCount: data.usedCount || 0,
+      active: data.active !== false,
+    };
 
-    // Check if active
-    if (!coupon.isActive) {
+    if (!coupon.active) {
       return { valid: false, error: 'This coupon is no longer active' };
     }
 
-    // Check expiry
-    const expiryDate = coupon.expiresAt instanceof Date 
-      ? coupon.expiresAt 
-      : new Date(coupon.expiresAt);
+    const expiryDate = coupon.expiryDate instanceof Date
+      ? coupon.expiryDate
+      : new Date(coupon.expiryDate);
     if (expiryDate < new Date()) {
       return { valid: false, error: 'This coupon has expired' };
     }
 
-    // Check usage limit
     if (coupon.usedCount >= coupon.usageLimit) {
       return { valid: false, error: 'This coupon has reached its usage limit' };
     }
 
-    // Check minimum order value
-    if (orderValue < coupon.minOrderValue) {
-      return { 
-        valid: false, 
-        error: `Minimum order value of ₹${coupon.minOrderValue} required` 
+    if (orderValue < coupon.minOrderAmount) {
+      return {
+        valid: false,
+        error: `Minimum order value of ₹${coupon.minOrderAmount} required`
       };
     }
 
-    // Calculate discount
     let discount = 0;
-    if (coupon.discountType === 'percent') {
-      discount = (orderValue * coupon.value) / 100;
+    if (coupon.discountType === 'percentage') {
+      discount = (orderValue * coupon.discountValue) / 100;
     } else {
-      discount = coupon.value;
+      discount = coupon.discountValue;
     }
 
-    // Cap discount at order value
+    if (coupon.maxDiscount && discount > coupon.maxDiscount) {
+      discount = coupon.maxDiscount;
+    }
+
     discount = Math.min(discount, orderValue);
 
     return { valid: true, discount, coupon };

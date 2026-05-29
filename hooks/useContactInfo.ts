@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
-import type { ContactInfo } from "../../shared/models";
+import type { ContactInfo } from "@/shared/models";
 
 const DEFAULT_CONTACT_INFO: ContactInfo = {
   phone: "+91 98765 43210",

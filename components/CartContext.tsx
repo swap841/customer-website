@@ -6,7 +6,20 @@ import {
   useState,
   ReactNode,
   useEffect,
+  useRef,
+  useCallback,
 } from "react";
+import { db, auth } from "@/firebaseConfig";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  writeBatch,
+  getDocs,
+  query,
+  serverTimestamp,
+} from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 export interface CartItem {
   id: string;
@@ -59,6 +72,8 @@ interface CartContextType {
   setTaxPercentage: (pct: number) => void;
   freeDeliveryThreshold: number;
   setFreeDeliveryThreshold: (val: number) => void;
+
+  isSyncing: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -69,10 +84,36 @@ export const useCart = () => {
   return context;
 };
 
+function cartItemToFirestore(item: CartItem) {
+  return {
+    productId: item.id,
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+    imageUrl: item.imageUrl || "",
+    weight: item.weight || 0,
+    unit: item.unit || "",
+    updatedAt: serverTimestamp(),
+  };
+}
+
+function firestoreDocToCartItem(id: string, data: Record<string, unknown>): CartItem {
+  return {
+    id: data.productId as string || id,
+    name: (data.name as string) || "",
+    price: (data.price as number) || 0,
+    quantity: (data.quantity as number) || 1,
+    imageUrl: data.imageUrl as string | undefined,
+    weight: data.weight as number | undefined,
+    unit: data.unit as string | undefined,
+  };
+}
+
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(true);
 
   const [couponCode, setCouponCode] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -82,6 +123,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [taxPercentage, setTaxPercentage] = useState(5);
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(100);
 
+  const [user, setUser] = useState<{ uid: string } | null>(null);
+
+  const isFromSnapshot = useRef(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialSyncDone = useRef(false);
+  const unsubSnapshot = useRef<(() => void) | null>(null);
+
+  // Load from localStorage on mount
   useEffect(() => {
     setIsMounted(true);
     const saved = localStorage.getItem("cart");
@@ -92,11 +141,126 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // Save to localStorage whenever cart changes
   useEffect(() => {
     if (isMounted) {
       localStorage.setItem("cart", JSON.stringify(cartItems));
     }
   }, [cartItems, isMounted]);
+
+  // Track auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser ? { uid: currentUser.uid } : null);
+      if (!currentUser) {
+        initialSyncDone.current = false;
+        setIsSyncing(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Listen to Firestore cart when user is logged in
+  useEffect(() => {
+    if (!user) {
+      if (unsubSnapshot.current) {
+        unsubSnapshot.current();
+        unsubSnapshot.current = null;
+      }
+      return;
+    }
+
+    setIsSyncing(true);
+
+    const cartRef = collection(db, "users", user.uid, "cart");
+    const q = query(cartRef);
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const serverItems: CartItem[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data() as Record<string, unknown>;
+        serverItems.push(firestoreDocToCartItem(docSnap.id, data));
+      });
+
+      isFromSnapshot.current = true;
+
+      setCartItems((prev) => {
+        if (!initialSyncDone.current) {
+          initialSyncDone.current = true;
+          // Merge: server takes priority for item data, keep higher quantity
+          const merged = [...serverItems];
+          for (const localItem of prev) {
+            const existing = merged.find((m) => m.id === localItem.id);
+            if (existing) {
+              existing.quantity = Math.max(existing.quantity, localItem.quantity);
+            } else {
+              merged.push(localItem);
+            }
+          }
+          setIsSyncing(false);
+          return merged;
+        }
+        // After initial sync, server wins if this update came from another tab/session
+        if (serverItems.length > 0 || prev.length === 0) {
+          setIsSyncing(false);
+          return serverItems;
+        }
+        setIsSyncing(false);
+        return prev;
+      });
+    });
+
+    unsubSnapshot.current = unsub;
+
+    return () => {
+      unsub();
+      unsubSnapshot.current = null;
+    };
+  }, [user]);
+
+  // Debounced push to Firestore when cart changes locally
+  const pushToFirestore = useCallback((items: CartItem[]) => {
+    if (!user) return;
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    debounceTimer.current = setTimeout(async () => {
+      if (!user) return;
+      const batch = writeBatch(db);
+      const cartRef = collection(db, "users", user.uid, "cart");
+
+      // Delete all existing and re-add
+      const existingDocs = await getDocs(query(cartRef));
+      existingDocs.forEach((docSnap) => {
+        batch.delete(doc(cartRef, docSnap.id));
+      });
+
+      for (const item of items) {
+        const docRef = doc(cartRef);
+        batch.set(docRef, cartItemToFirestore(item));
+      }
+
+      try {
+        await batch.commit();
+      } catch (error) {
+        console.error("Error syncing cart to Firestore:", error);
+      }
+    }, 300);
+  }, [user]);
+
+  // When cartItems change locally (not from snapshot), push to Firestore
+  useEffect(() => {
+    if (isFromSnapshot.current) {
+      isFromSnapshot.current = false;
+      return;
+    }
+    if (!initialSyncDone.current) return;
+    if (!user) return;
+
+    pushToFirestore(cartItems);
+  }, [cartItems, user, pushToFirestore]);
 
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
@@ -204,6 +368,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setTaxPercentage,
         freeDeliveryThreshold,
         setFreeDeliveryThreshold,
+        isSyncing,
       }}
     >
       {children}

@@ -23,22 +23,23 @@ import {
   RotateCcw,
   Send,
   Bug,
+  ShieldCheck,
 } from "lucide-react";
 
 const ORDER_STEPS = [
   { key: "Pending", label: "Order Placed", icon: Package },
   { key: "Packing", label: "Packing", icon: Clock },
   { key: "Ready to Dispatch", label: "Ready to Dispatch", icon: Package },
-  { key: "Shipped", label: "Shipped", icon: Truck },
   { key: "Assigned", label: "Assigned", icon: Truck },
   { key: "Accepted", label: "Accepted", icon: Clock },
   { key: "Out for Delivery", label: "Out for Delivery", icon: Truck },
+  { key: "Awaiting Verification", label: "Awaiting Verification", icon: ShieldCheck },
   { key: "Delivered", label: "Delivered", icon: CheckCircle2 },
 ];
 
 const STATUS_ORDER = [
-  "Pending", "Packing", "Ready to Dispatch", "Shipped",
-  "Assigned", "Accepted", "Out for Delivery", "Delivered", "Cancelled"
+  "Pending", "Packing", "Ready to Dispatch",
+  "Assigned", "Accepted", "Out for Delivery", "Awaiting Verification", "Delivered", "Cancelled"
 ];
 
 export default function OrderTrackingPage() {
@@ -98,18 +99,23 @@ export default function OrderTrackingPage() {
     return () => unsubAuth();
   }, [orderId]);
 
-  // Sync ticketContactId from order doc and listen to contact
   useEffect(() => {
     if (!order?.ticketContactId) {
       setTicketLoading(false);
       return;
     }
-    const unsub = onSnapshot(doc(db, "contacts", order.ticketContactId), (snap) => {
-      if (snap.exists()) {
-        setTicketContact({ id: snap.id, ...snap.data() });
+    const unsub = onSnapshot(
+      doc(db, "contacts", order.ticketContactId),
+      (snap) => {
+        if (snap.exists()) {
+          setTicketContact({ id: snap.id, ...snap.data() });
+        }
+        setTicketLoading(false);
+      },
+      () => {
+        setTicketLoading(false);
       }
-      setTicketLoading(false);
-    });
+    );
     return unsub;
   }, [order?.ticketContactId]);
 
@@ -141,6 +147,7 @@ export default function OrderTrackingPage() {
 
   const currentStatus = order.status || "Pending";
   const isCancelled = currentStatus === "Cancelled";
+  const isAwaitingVerification = currentStatus === "Awaiting Verification";
   const currentStepIndex = STATUS_ORDER.indexOf(currentStatus);
 
   const formatDate = (d: string) => {
@@ -158,7 +165,6 @@ export default function OrderTrackingPage() {
           <ChevronLeft className="w-4 h-4" /> Back to Orders
         </button>
 
-        {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -194,7 +200,18 @@ export default function OrderTrackingPage() {
           )}
         </div>
 
-        {/* Progress Stepper */}
+        {/* Verification Code Display */}
+        {isAwaitingVerification && order.verificationCode && (
+          <div className="bg-emerald-600 rounded-2xl p-6 mb-4 text-center shadow-lg">
+            <ShieldCheck className="w-8 h-8 text-emerald-200 mx-auto mb-2" />
+            <p className="text-emerald-100 text-xs font-bold uppercase tracking-wider mb-1">Delivery Verification Code</p>
+            <p className="text-4xl font-black text-white tracking-[0.25em] select-all">
+              {order.verificationCode}
+            </p>
+            <p className="text-emerald-200 text-xs mt-2">Share this code with the delivery person to confirm delivery</p>
+          </div>
+        )}
+
         {!isCancelled ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
             <div className="relative">
@@ -202,7 +219,6 @@ export default function OrderTrackingPage() {
                 const stepOrderIdx = STATUS_ORDER.indexOf(step.key);
                 const isCompleted = stepOrderIdx <= currentStepIndex && !isCancelled;
                 const isCurrent = step.key === currentStatus;
-                const isPending = !isCompleted && !isCurrent;
                 const Icon = step.icon;
 
                 return (
@@ -250,7 +266,6 @@ export default function OrderTrackingPage() {
           </div>
         )}
 
-        {/* Order Details */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
           <h2 className="font-bold text-gray-900 mb-4">Items</h2>
           <div className="space-y-3">
@@ -277,7 +292,6 @@ export default function OrderTrackingPage() {
           </div>
         </div>
 
-        {/* Delivery Address */}
         {order.address && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
             <h2 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -291,13 +305,12 @@ export default function OrderTrackingPage() {
             )}
             {order.outOfCity && (
               <div className="mt-3 bg-amber-50 rounded-lg p-2.5 text-xs text-amber-700">
-                Out-of-city delivery — shipped via third-party partner
+                Extended delivery area — additional charges may apply
               </div>
             )}
           </div>
         )}
 
-        {/* Review (only after delivered) */}
         {currentStatus === "Delivered" && !reviewSubmitted && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
             <h2 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -322,17 +335,15 @@ export default function OrderTrackingPage() {
                 if (!user || reviewLoading) return;
                 setReviewLoading(true);
                 try {
-                  await addDoc(collection(db, "reviews"), {
-                    userId: user.uid,
-                    orderId,
+                  await addDoc(collection(db, "users", user.uid, "reviews"), {
+                    productId: "order",
                     rating: reviewRating,
                     comment: reviewComment,
-                    items: order.items,
                     createdAt: new Date().toISOString(),
                   });
                   setReviewSubmitted(true);
-                } catch (err) {
-                  console.error("Review submit error:", err);
+                } catch {
+                  toast.error("Failed to submit review");
                 } finally {
                   setReviewLoading(false);
                 }
@@ -353,7 +364,6 @@ export default function OrderTrackingPage() {
           </div>
         )}
 
-        {/* Return Request (only after delivered) */}
         {currentStatus === "Delivered" && !returnSubmitted && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
             <h2 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -373,17 +383,17 @@ export default function OrderTrackingPage() {
                 setReturnLoading(true);
                 try {
                   await addDoc(collection(db, "tickets"), {
-                    type: "return",
+                    type: "return_request",
                     userId: user.uid,
                     orderId,
-                    reason: returnReason,
+                    message: returnReason,
                     status: "open",
-                    items: order.items,
                     createdAt: new Date().toISOString(),
                   });
                   setReturnSubmitted(true);
-                } catch (err) {
-                  console.error("Return submit error:", err);
+                  toast.success("Return request submitted!");
+                } catch {
+                  toast.error("Failed to submit return request");
                 } finally {
                   setReturnLoading(false);
                 }
@@ -404,7 +414,6 @@ export default function OrderTrackingPage() {
           </div>
         )}
 
-        {/* Report a Problem (only after delivered) */}
         {currentStatus === "Delivered" && !problemSubmitted && (
           <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-6 mb-4">
             <h2 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -450,7 +459,6 @@ export default function OrderTrackingPage() {
                       status: "open",
                       replies: [],
                     });
-                    // Store contact ID in order doc for persistence
                     await updateDoc(doc(db, "users", user.uid, "orders", orderId), {
                       ticketContactId: docRef.id,
                     });
@@ -479,14 +487,12 @@ export default function OrderTrackingPage() {
           </div>
         )}
 
-        {/* View Ticket Status (when a contact exists for this order) */}
         {!ticketLoading && ticketContact && (
           <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 p-6 mb-4">
             <h2 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
               <Bug className="w-4 h-4 text-red-500" /> Ticket Status
             </h2>
 
-            {/* Status badge */}
             <div className="flex items-center gap-2 mb-4">
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                 ticketContact.status === "resolved" ? "bg-emerald-100 text-emerald-700" :
@@ -507,13 +513,11 @@ export default function OrderTrackingPage() {
               )}
             </div>
 
-            {/* Original message */}
             <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200 mb-4">
               <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Your report</p>
               <p className="text-xs text-zinc-700">{ticketContact.message}</p>
             </div>
 
-            {/* All replies (owner + customer) */}
             {ticketContact.replies && ticketContact.replies.length > 0 && (
               <div className="space-y-3 mb-4">
                 <p className="text-[10px] font-bold text-zinc-400 uppercase">Conversation</p>
@@ -548,7 +552,6 @@ export default function OrderTrackingPage() {
               </div>
             )}
 
-            {/* Customer reply input (only when not resolved) */}
             {ticketContact.status !== "resolved" && (
               <div className="flex gap-2 mt-4 pt-4 border-t border-zinc-100">
                 <input
@@ -569,7 +572,9 @@ export default function OrderTrackingPage() {
                           status: "in-progress",
                         });
                         setTicketReplyText("");
-                      } catch {}
+                      } catch {
+                        toast.error("Failed to send reply. Please try again.");
+                      }
                       setTicketReplying(false);
                     }
                   }}
@@ -588,7 +593,9 @@ export default function OrderTrackingPage() {
                         status: "in-progress",
                       });
                       setTicketReplyText("");
-                    } catch {}
+                    } catch {
+                      toast.error("Failed to send reply. Please try again.");
+                    }
                     setTicketReplying(false);
                   }}
                   disabled={!ticketReplyText.trim() || ticketReplying}
@@ -600,7 +607,6 @@ export default function OrderTrackingPage() {
               </div>
             )}
 
-            {/* Replacement order link */}
             {ticketContact.replacementOrderId && (
               <div className="mt-4 pt-4 border-t border-zinc-100">
                 <a
@@ -613,7 +619,6 @@ export default function OrderTrackingPage() {
               </div>
             )}
 
-            {/* Resolved badge */}
             {ticketContact.status === "resolved" && !ticketContact.replacementOrderId && (
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto mb-1" />

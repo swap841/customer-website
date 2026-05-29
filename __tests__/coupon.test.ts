@@ -17,15 +17,13 @@ jest.mock("@/lib/firebaseClient", () => ({
 function makeCoupon(overrides: Partial<Coupon> = {}): Coupon {
   return {
     code: "SAVE20",
-    discountType: "percent",
-    value: 20,
-    discount: 20,
+    discountType: "percentage",
+    discountValue: 20,
     minOrderAmount: 100,
-    minOrderValue: 100,
-    expiresAt: new Date(Date.now() + 86400000),
+    expiryDate: new Date(Date.now() + 86400000),
     usageLimit: 100,
     usedCount: 0,
-    isActive: true,
+    active: true,
     ...overrides,
   };
 }
@@ -56,7 +54,7 @@ describe("validateCoupon", () => {
   });
 
   it("returns error when coupon is inactive", async () => {
-    const coupon = makeCoupon({ isActive: false });
+    const coupon = makeCoupon({ active: false });
     mockGetDoc.mockResolvedValue({ exists: () => true, data: () => coupon, id: "INACTIVE" });
 
     const result = await validateCoupon("INACTIVE", 500);
@@ -66,7 +64,7 @@ describe("validateCoupon", () => {
   });
 
   it("returns error when coupon has expired", async () => {
-    const coupon = makeCoupon({ expiresAt: new Date(Date.now() - 86400000) });
+    const coupon = makeCoupon({ expiryDate: new Date(Date.now() - 86400000) });
     mockGetDoc.mockResolvedValue({ exists: () => true, data: () => coupon, id: "EXPIRED" });
 
     const result = await validateCoupon("EXPIRED", 500);
@@ -76,7 +74,7 @@ describe("validateCoupon", () => {
   });
 
   it("returns error when order value is below minimum", async () => {
-    const coupon = makeCoupon({ minOrderAmount: 300, minOrderValue: 300 });
+    const coupon = makeCoupon({ minOrderAmount: 300 });
     mockGetDoc.mockResolvedValue({ exists: () => true, data: () => coupon, id: "MINORDER" });
 
     const result = await validateCoupon("MINORDER", 200);
@@ -86,7 +84,7 @@ describe("validateCoupon", () => {
   });
 
   it("caps discount at subtotal", async () => {
-    const coupon = makeCoupon({ discountType: "flat", value: 500, discount: 500, minOrderAmount: 0, minOrderValue: 0 });
+    const coupon = makeCoupon({ discountType: "fixed", discountValue: 500, minOrderAmount: 0 });
     mockGetDoc.mockResolvedValue({ exists: () => true, data: () => coupon, id: "BIG" });
 
     const result = await validateCoupon("BIG", 50);
@@ -105,24 +103,34 @@ describe("validateCoupon", () => {
     expect(result.error).toBe("This coupon has reached its usage limit");
   });
 
-  it("handles flat discount type", async () => {
-    const coupon = makeCoupon({ discountType: "flat", value: 50, discount: 50 });
-    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => coupon, id: "FLAT50" });
+  it("handles fixed discount type", async () => {
+    const coupon = makeCoupon({ discountType: "fixed", discountValue: 50 });
+    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => coupon, id: "FIXED50" });
 
-    const result = await validateCoupon("FLAT50", 500);
+    const result = await validateCoupon("FIXED50", 500);
 
     expect(result.valid).toBe(true);
     expect(result.discount).toBe(50);
   });
 
-  it("handles percent discount type", async () => {
-    const coupon = makeCoupon({ discountType: "percent", value: 10, discount: 10 });
+  it("handles percentage discount type", async () => {
+    const coupon = makeCoupon({ discountType: "percentage", discountValue: 10 });
     mockGetDoc.mockResolvedValue({ exists: () => true, data: () => coupon, id: "PCT10" });
 
     const result = await validateCoupon("PCT10", 200);
 
     expect(result.valid).toBe(true);
     expect(result.discount).toBe(20);
+  });
+
+  it("handles maxDiscount cap", async () => {
+    const coupon = makeCoupon({ discountType: "percentage", discountValue: 50, maxDiscount: 30 });
+    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => coupon, id: "MAXCAP" });
+
+    const result = await validateCoupon("MAXCAP", 200);
+
+    expect(result.valid).toBe(true);
+    expect(result.discount).toBe(30);
   });
 
   it("returns error on Firestore exception", async () => {

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
-import type { Banner } from "../../shared/models";
+import type { Banner } from "@/shared/models";
 
 export function useBanners() {
   return useQuery({

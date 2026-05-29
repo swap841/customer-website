@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { getAuth } from "firebase/auth";
-import type { Review } from "../../shared/models";
+import type { Review } from "@/shared/models";
 
 export function useReviews(productId: string) {
   const [reviews, setReviews] = useState<Review[]>([]);

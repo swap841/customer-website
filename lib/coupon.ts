@@ -3,15 +3,14 @@ import { db } from "@/lib/firebaseClient";
 
 export interface Coupon {
   code: string;
-  discountType: "flat" | "percent";
-  discount: number;
-  value: number;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
   minOrderAmount: number;
-  minOrderValue: number;
-  expiresAt: Date;
+  maxDiscount?: number;
+  expiryDate: Date;
   usageLimit: number;
   usedCount: number;
-  isActive: boolean;
+  active: boolean;
 }
 
 export interface ValidationResult {
@@ -33,25 +32,31 @@ export async function validateCoupon(
       return { valid: false, error: "Coupon code not found" };
     }
 
-    const coupon = { ...snap.data(), code: snap.id } as Coupon;
+    const data = snap.data();
+    const coupon: Coupon = {
+      code: snap.id,
+      discountType: data.discountType || "percentage",
+      discountValue: data.discountValue || 0,
+      minOrderAmount: data.minOrderAmount || 0,
+      maxDiscount: data.maxDiscount,
+      expiryDate: data.expiryDate instanceof Date ? data.expiryDate : new Date(data.expiryDate?.seconds ? data.expiryDate.seconds * 1000 : data.expiryDate),
+      usageLimit: data.usageLimit || 0,
+      usedCount: data.usedCount || 0,
+      active: data.active !== false,
+    };
 
-    if (!coupon.isActive) {
+    if (!coupon.active) {
       return { valid: false, error: "This coupon is no longer active" };
     }
 
-    const expiryDate =
-      coupon.expiresAt instanceof Date
-        ? coupon.expiresAt
-        : new Date(coupon.expiresAt);
-    if (expiryDate < new Date()) {
+    if (coupon.expiryDate < new Date()) {
       return { valid: false, error: "This coupon has expired" };
     }
 
-    const minOrder = coupon.minOrderAmount || coupon.minOrderValue || 0;
-    if (subtotal < minOrder) {
+    if (subtotal < coupon.minOrderAmount) {
       return {
         valid: false,
-        error: `Minimum order value of ₹${minOrder} required`,
+        error: `Minimum order value of ₹${coupon.minOrderAmount} required`,
       };
     }
 
@@ -60,11 +65,14 @@ export async function validateCoupon(
     }
 
     let discount = 0;
-    if (coupon.discountType === "percent") {
-      const pct = coupon.value || coupon.discount || 0;
-      discount = (subtotal * pct) / 100;
+    if (coupon.discountType === "percentage") {
+      discount = (subtotal * coupon.discountValue) / 100;
     } else {
-      discount = coupon.value || coupon.discount || 0;
+      discount = coupon.discountValue;
+    }
+
+    if (coupon.maxDiscount && discount > coupon.maxDiscount) {
+      discount = coupon.maxDiscount;
     }
 
     discount = Math.min(discount, subtotal);

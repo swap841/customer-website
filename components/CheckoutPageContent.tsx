@@ -29,9 +29,11 @@ import {
 } from "lucide-react";
 
 import { useContactInfo } from "@/hooks/useContactInfo";
+import { useAddresses } from "@/hooks/useAddresses";
+import AddressHistory from "@/components/AddressHistory";
 
-const STORE_LAT = 17.6868;
-const STORE_LNG = 74.0066;
+const STORE_LAT_DEFAULT = 17.6868;
+const STORE_LNG_DEFAULT = 74.0066;
 
 declare global {
   interface Window {
@@ -73,6 +75,8 @@ export default function CheckoutPageContent() {
   const DELIVERY_FEE_PER_KM = contactInfo.deliveryFeePerKm || 5;
   const FREE_DELIVERY_ABOVE = contactInfo.freeDeliveryAbove || 100;
   const THIRD_PARTY_DELIVERY_CHARGE = 25;
+  const STORE_LAT = contactInfo.warehouseLat || STORE_LAT_DEFAULT;
+  const STORE_LNG = contactInfo.warehouseLng || STORE_LNG_DEFAULT;
 
   const {
     cartItems,
@@ -99,6 +103,9 @@ export default function CheckoutPageContent() {
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [isThirdPartyDelivery, setIsThirdPartyDelivery] = useState(false);
   const [preferredSlot, setPreferredSlot] = useState<TimeSlot>("morning");
+  const { savedAddresses, saveAddress } = useAddresses();
+
+  const savedAddressStrings = savedAddresses.map((a) => a.address);
 
   const effectiveDeliveryFee = deliveryOption === "delivery" ? (subtotal >= FREE_DELIVERY_ABOVE ? 0 : deliveryCharge) : 0;
   const taxAmount = Math.round((subtotal * TAX_PERCENT) / 100);
@@ -113,7 +120,7 @@ export default function CheckoutPageContent() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((u) => {
       if (!u) {
-        router.push("/login");
+        router.push("/auth");
       } else {
         setUser(u);
         setName(u.displayName || "");
@@ -135,7 +142,7 @@ export default function CheckoutPageContent() {
     setDistanceKm(Math.round(dist * 10) / 10);
     if (dist > MAX_DIRECT_DELIVERY_KM) {
       setIsThirdPartyDelivery(true);
-      toast(`You are ${dist.toFixed(1)} km away. Third-party delivery (₹${THIRD_PARTY_DELIVERY_CHARGE} extra) will be used.`);
+      toast(`You are ${dist.toFixed(1)} km away. Additional delivery charge of ₹${THIRD_PARTY_DELIVERY_CHARGE} will apply.`);
     } else {
       setIsThirdPartyDelivery(false);
     }
@@ -305,6 +312,9 @@ export default function CheckoutPageContent() {
             }
 
             if (verifyData.orderId) {
+              if (address && deliveryOption === "delivery") {
+                saveAddress(address, location?.lat, location?.lng);
+              }
               toast.dismiss(paymentToastId);
               toast.success("Payment successful! Order placed.");
               if (clearCart) clearCart();
@@ -443,6 +453,9 @@ export default function CheckoutPageContent() {
         });
         const codData = await codRes.json();
         if (codRes.ok && codData.success) {
+          if (address && deliveryOption === "delivery") {
+            saveAddress(address, location?.lat, location?.lng);
+          }
           toast.success("Order placed successfully!");
           if (clearCart) clearCart();
           router.push(`/order-success/${codData.orderId}`);
@@ -527,9 +540,9 @@ export default function CheckoutPageContent() {
         <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 mb-6 flex items-start gap-3">
           <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-amber-800">Third-Party Delivery Required</h3>
+            <h3 className="font-semibold text-amber-800">Extended Delivery</h3>
             <p className="text-amber-700 text-sm mt-1">
-              You are {distanceKm} km away. A third-party courier will deliver your order. Additional charge of <span className="font-bold">₹{THIRD_PARTY_DELIVERY_CHARGE}</span> will apply.
+              You are {distanceKm} km away. Additional delivery charge of <span className="font-bold">₹{THIRD_PARTY_DELIVERY_CHARGE}</span> will apply.
             </p>
           </div>
         </div>
@@ -552,6 +565,10 @@ export default function CheckoutPageContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-1"><MapPin className="w-3.5 h-3.5 inline mr-1" /> Delivery Address *</label>
                 <textarea className="w-full bg-transparent outline-none text-gray-800 resize-none" placeholder="Enter complete delivery address" value={address} onChange={(e) => setAddress(e.target.value)} rows={3} required />
               </div>
+              <AddressHistory
+                onSelect={(addr) => setAddress(addr)}
+                savedAddresses={savedAddressStrings}
+              />
               <div className="rounded-xl border border-gray-300 p-3 bg-gray-50">
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-sm font-medium text-gray-700"><Navigation className="w-3.5 h-3.5 inline mr-1" /> Delivery Location</label>
@@ -582,7 +599,7 @@ export default function CheckoutPageContent() {
                 <div className="bg-blue-100 p-2 rounded-lg mr-3"><Store className="w-5 h-5 text-blue-600" /></div>
                 <div>
                   <h3 className="font-semibold text-blue-800">Store Pickup Information</h3>
-                  <p className="text-blue-700 text-sm mt-1 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> 123 Grocery Street, City Center, Satara - 415001</p>
+                  <p className="text-blue-700 text-sm mt-1 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {contactInfo.address || "Store address not set"}</p>
                   <p className="text-blue-600 text-sm mt-2 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Pickup Hours: 9:00 AM - 9:00 PM</p>
                 </div>
               </div>
@@ -603,7 +620,7 @@ export default function CheckoutPageContent() {
           )}
           <div className="flex justify-between py-2"><span className="text-gray-600">Tax</span><span className="font-medium">₹{taxAmount}</span></div>
           {isThirdPartyDelivery && deliveryOption === "delivery" && (
-            <div className="flex justify-between py-2 text-amber-700"><span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> Third-party delivery</span><span className="font-medium">₹{THIRD_PARTY_DELIVERY_CHARGE}</span></div>
+            <div className="flex justify-between py-2 text-amber-700"><span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> Extended distance fee</span><span className="font-medium">₹{THIRD_PARTY_DELIVERY_CHARGE}</span></div>
           )}
           {couponDiscount > 0 && (
             <div className="flex justify-between py-2 text-emerald-600 font-semibold"><span>Coupon discount</span><span>-₹{couponDiscount}</span></div>

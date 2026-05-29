@@ -7,13 +7,12 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   getAuth,
   onAuthStateChanged,
-  signInWithPopup,
-  GoogleAuthProvider,
   signOut,
   User,
 } from "firebase/auth";
 import { app } from "@/firebaseConfig";
 import { useCart } from "@/components/CartContext";
+import { requestFcmToken } from "@/lib/firebaseMessaging";
 import {
   ShoppingCart,
   Menu,
@@ -44,6 +43,9 @@ export default function Navbar() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        requestFcmToken(currentUser.uid).catch(() => {});
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -53,15 +55,6 @@ export default function Navbar() {
     setMobileMenuOpen(false);
     setProfileDropdown(false);
   }, [pathname]);
-
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (err) {
-      console.log("Login Error:", err);
-    }
-  };
 
   const logoutUser = async () => {
     await signOut(auth);
@@ -204,12 +197,12 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <button
-                onClick={loginWithGoogle}
+              <Link
+                href="/auth"
                 className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all duration-300"
               >
                 Sign In
-              </button>
+              </Link>
             )}
 
             {/* Mobile Menu Toggle */}

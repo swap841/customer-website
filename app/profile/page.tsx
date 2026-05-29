@@ -11,14 +11,18 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   orderBy,
   addDoc,
   setDoc,
+  updateDoc,
+  arrayUnion,
   Timestamp,
+  where,
 } from "firebase/firestore";
-import { MoreVertical, AlertTriangle, PackageX, RefreshCw, Upload, Camera, Loader2 } from "lucide-react";
+import { MoreVertical, AlertTriangle, PackageX, RefreshCw, Upload, Camera, Loader2, Send, MessageSquare } from "lucide-react";
 import { uploadToImgBB } from "@/lib/imageUpload";
 
 // --- Type Definitions ---
@@ -75,6 +79,11 @@ export default function ProfilePage() {
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+  const [queryModal, setQueryModal] = useState<{ order: Order; problemType: string } | null>(null);
+  const [querySelectedItems, setQuerySelectedItems] = useState<string[]>([]);
   const auth = getAuth();
   const router = useRouter();
 
@@ -268,15 +277,17 @@ export default function ProfilePage() {
     return hoursSince >= 24;
   };
 
-  const handleRaiseQuery = async (order: Order, problemType: string) => {
+  const handleRaiseQuery = async (order: Order, problemType: string, selectedItems?: string[]) => {
     if (!user) return;
     try {
-      const orderItems = (order.items || []).map((i) => i.name).join(", ");
+      const itemsToShow = selectedItems && selectedItems.length > 0
+        ? selectedItems.join(", ")
+        : (order.items || []).map((i) => i.name).join(", ");
       const docRef = await addDoc(collection(db, "contacts"), {
         name: customerData.name || user.displayName || "Customer",
         email: user.email || "",
         subject: `Problem: ${problemType} - Order #${order.id.slice(-8).toUpperCase()}`,
-        message: `[${problemType.toUpperCase()}] Order: ${order.id}\nItems: ${orderItems}`,
+        message: `[${problemType.toUpperCase()}] Order: ${order.id}\nItems: ${itemsToShow}`,
         orderId: order.id,
         userId: user.uid,
         createdAt: new Date(),
@@ -292,6 +303,13 @@ export default function ProfilePage() {
       toast.error("Failed to submit query.");
     }
     setOpenMenuIndex(null);
+  };
+
+  const handleSubmitQuery = () => {
+    if (!queryModal) return;
+    handleRaiseQuery(queryModal.order, queryModal.problemType, querySelectedItems);
+    setQueryModal(null);
+    setQuerySelectedItems([]);
   };
 
   // Close menu when clicking outside
@@ -357,6 +375,51 @@ export default function ProfilePage() {
     }
   };
 
+  // --- Fetch contacts for chat ---
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, "contacts"), where("userId", "==", user.uid));
+    const unsub = onSnapshot(q, (snap) => {
+      const list: any[] = [];
+      snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+      list.sort((a, b) => {
+        const aT = a.createdAt?.toDate?.()?.getTime() || a.createdAt?.seconds * 1000 || 0;
+        const bT = b.createdAt?.toDate?.()?.getTime() || b.createdAt?.seconds * 1000 || 0;
+        return aT - bT;
+      });
+      setContacts(list);
+    });
+    return () => unsub();
+  }, [user]);
+
+  const handleSendReply = async (contactId: string) => {
+    if (!replyText.trim() || !user) return;
+    setSendingReply(true);
+    try {
+      await updateDoc(doc(db, "contacts", contactId), {
+        replies: arrayUnion({
+          message: replyText.trim(),
+          createdAt: new Date().toISOString(),
+          by: "customer",
+        }),
+        updatedAt: new Date(),
+      });
+      setReplyText("");
+      toast.success("Reply sent!");
+    } catch (err) {
+      console.error("Error sending reply:", err);
+      toast.error("Failed to send reply");
+    }
+    setSendingReply(false);
+  };
+
+  const canCustomerReply = (contact: any) => {
+    const reps = contact.replies || [];
+    if (reps.length === 0) return false;
+    const last = reps[reps.length - 1];
+    return last.by === "owner";
+  };
+
   // --- Render ---
   if (!user) {
     return (
@@ -377,13 +440,21 @@ export default function ProfilePage() {
       {/* Left: Profile Edit */}
       <div className="w-full lg:w-1/3 bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl p-6 flex flex-col items-center border border-emerald-100/50">
         <div className="relative mb-4">
-          <Image
-            src={customerData.photoURL || user.photoURL || "/fallback-image.png"}
-            width={120}
-            height={120}
-            alt="Profile"
-            className="rounded-full ring-4 ring-emerald-200 shadow-lg object-cover w-[120px] h-[120px]"
-          />
+          {customerData.photoURL || user.photoURL ? (
+            <Image
+              src={customerData.photoURL || user.photoURL || ""}
+              width={120}
+              height={120}
+              alt="Profile"
+              className="rounded-full ring-4 ring-emerald-200 shadow-lg object-cover w-[120px] h-[120px]"
+            />
+          ) : (
+            <div className="w-[120px] h-[120px] rounded-full ring-4 ring-emerald-200 shadow-lg bg-emerald-100 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+            </div>
+          )}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingPhoto}
@@ -450,6 +521,66 @@ export default function ProfilePage() {
           >
             Logout
           </button>
+        </div>
+
+        {/* --- Chat Support Section --- */}
+        <div className="w-full mt-6 bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl p-4 border border-emerald-100/50">
+          <h3 className="text-sm font-black text-zinc-800 mb-3 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-emerald-500" />
+            Support Tickets
+          </h3>
+          {contacts.length === 0 ? (
+            <p className="text-xs text-zinc-400 text-center py-6">No support tickets yet.</p>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {contacts.map((contact) => {
+                const allReplies = contact.replies || [];
+                return (
+                  <div key={contact.id} className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1 truncate">{contact.subject}</p>
+                    <div className="bg-white rounded-lg p-2 mb-2 border-l-2 border-emerald-400">
+                      <p className="text-[11px] text-zinc-500 font-medium mb-0.5">You</p>
+                      <p className="text-xs text-zinc-800 whitespace-pre-wrap">{contact.message}</p>
+                    </div>
+                    {allReplies.map((r: any, i: number) => (
+                      <div key={i} className={`rounded-lg p-2 mb-1 ${r.by === "owner" ? "bg-emerald-50 border-l-2 border-emerald-400 ml-3" : "bg-white border-l-2 border-zinc-300 ml-6"}`}>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase mb-0.5">{r.by === "owner" ? "Owner" : "You"}</p>
+                        <p className="text-xs text-zinc-800 whitespace-pre-wrap">{r.message}</p>
+                        <p className="text-[9px] text-zinc-300 mt-0.5">{r.createdAt ? (r.createdAt.seconds ? new Date(r.createdAt.seconds * 1000).toLocaleString() : new Date(r.createdAt).toLocaleString()) : ""}</p>
+                      </div>
+                    ))}
+                    {canCustomerReply(contact) ? (
+                      <div className="flex gap-2 mt-2">
+                        <textarea
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          placeholder="Type your reply..."
+                          rows={2}
+                          maxLength={300}
+                          className="flex-1 px-2.5 py-1.5 text-xs border border-zinc-200 bg-white rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              if (replyText.trim()) handleSendReply(contact.id);
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => handleSendReply(contact.id)}
+                          disabled={sendingReply || !replyText.trim()}
+                          className="self-end p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition disabled:opacity-50"
+                        >
+                          <Send className={`w-4 h-4 ${sendingReply ? "animate-pulse" : ""}`} />
+                        </button>
+                      </div>
+                    ) : allReplies.length > 0 ? (
+                      <p className="text-[10px] text-zinc-400 italic mt-1 text-center">Waiting for owner to respond...</p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -552,13 +683,13 @@ export default function ProfilePage() {
                         {openMenuIndex === idx && (
                           <div className="absolute right-0 top-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 w-52 overflow-hidden" onClick={(e) => e.stopPropagation()}>
                             <p className="px-3 py-2 text-[9px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100">Raise a Query</p>
-                            <button onClick={() => handleRaiseQuery(order, "defective")} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 hover:bg-rose-50 hover:text-rose-700 transition text-left">
+                            <button onClick={() => { setQueryModal({ order, problemType: "defective" }); setOpenMenuIndex(null); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 hover:bg-rose-50 hover:text-rose-700 transition text-left">
                               <AlertTriangle className="w-3.5 h-3.5" /> Defective / Damaged Item
                             </button>
-                            <button onClick={() => handleRaiseQuery(order, "missing")} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 hover:bg-amber-50 hover:text-amber-700 transition text-left">
+                            <button onClick={() => { setQueryModal({ order, problemType: "missing" }); setOpenMenuIndex(null); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 hover:bg-amber-50 hover:text-amber-700 transition text-left">
                               <PackageX className="w-3.5 h-3.5" /> Missing Item
                             </button>
-                            <button onClick={() => handleRaiseQuery(order, "wrong")} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 hover:bg-blue-50 hover:text-blue-700 transition text-left">
+                            <button onClick={() => { setQueryModal({ order, problemType: "wrong" }); setOpenMenuIndex(null); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 hover:bg-blue-50 hover:text-blue-700 transition text-left">
                               <RefreshCw className="w-3.5 h-3.5" /> Wrong Order
                             </button>
                           </div>
@@ -592,6 +723,54 @@ export default function ProfilePage() {
         )}
       </div>
     </div>
+
+    {/* --- Query Item Selection Modal --- */}
+    {queryModal && (
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setQueryModal(null)}>
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-sm font-black text-zinc-800 mb-1">
+            {queryModal.problemType === "missing" ? "Missing Items" :
+             queryModal.problemType === "defective" ? "Defective Items" : "Wrong Order"}
+          </h3>
+          <p className="text-[10px] text-zinc-400 mb-3">Select the items you want to report:</p>
+          <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+            {(queryModal.order.items || []).map((item) => (
+              <label key={item.id} className="flex items-center gap-2.5 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2.5 cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition">
+                <input
+                  type="checkbox"
+                  checked={querySelectedItems.includes(item.name)}
+                  onChange={() => {
+                    setQuerySelectedItems((prev) =>
+                      prev.includes(item.name)
+                        ? prev.filter((n) => n !== item.name)
+                        : [...prev, item.name]
+                    );
+                  }}
+                  className="accent-emerald-500 w-4 h-4"
+                />
+                <span className="text-xs font-semibold text-zinc-700">{item.name}</span>
+                <span className="text-[10px] text-zinc-400 ml-auto">×{item.quantity}</span>
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setQueryModal(null); setQuerySelectedItems([]); }}
+              className="flex-1 py-2 border border-zinc-200 text-zinc-600 rounded-xl text-xs font-bold hover:bg-zinc-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitQuery}
+              disabled={querySelectedItems.length === 0}
+              className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-xs font-bold hover:from-emerald-700 hover:to-teal-700 transition disabled:opacity-50"
+            >
+              Submit ({querySelectedItems.length} item{querySelectedItems.length !== 1 ? "s" : ""})
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 }
