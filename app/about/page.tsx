@@ -2,7 +2,6 @@
 
 "use client";
 
-import React from "react";
 import { Sparkles, CheckCircle2, TrendingUp, ShieldCheck } from "lucide-react";
 import { useContactInfo } from "@/hooks/useContactInfo";
 

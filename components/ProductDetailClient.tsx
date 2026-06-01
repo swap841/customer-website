@@ -21,7 +21,6 @@ import {
   ChevronRight,
   Heart,
   Star,
-  StarHalf,
   Clock,
   User,
   MessageSquare,

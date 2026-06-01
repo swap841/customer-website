@@ -1,5 +1,5 @@
-import { validateCoupon } from "@/lib/coupon";
-import type { Coupon } from "@/lib/coupon";
+import { validateCoupon } from "@/utils/coupon";
+import type { Coupon } from "@/utils/coupon";
 
 const mockGetDoc = jest.fn();
 const mockDoc = jest.fn();

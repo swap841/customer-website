@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { collection, getDocs, query, where, limit, startAfter, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
-import { useProducts } from "@/hooks/useProducts";
 import ProductCard from "@/components/ProductCard";
-import { Search, Star } from "lucide-react";
+import { Search, Loader2, ChevronDown } from "lucide-react";
+import type { Product } from "@/shared/models";
 
 interface Category {
   id: string;
@@ -16,8 +16,14 @@ interface Category {
   imageUrl?: string;
 }
 
+const PAGE_SIZE = 20;
+
 export default function ProductsPage() {
-  const { data: products, isLoading } = useProducts(50);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,9 +68,61 @@ export default function ProductsPage() {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    loadProducts(true);
+  }, []);
+
+  async function loadProducts(isInitial: boolean) {
+    if (isInitial) setLoading(true);
+    else setLoadingMore(true);
+
+    try {
+      let q = query(
+        collection(db, "products"),
+        where("active", "==", true),
+        orderBy("name"),
+        limit(PAGE_SIZE + 1)
+      );
+      if (!isInitial && lastDoc) {
+        q = query(
+          collection(db, "products"),
+          where("active", "==", true),
+          orderBy("name"),
+          startAfter(lastDoc),
+          limit(PAGE_SIZE + 1)
+        );
+      }
+
+      const snap = await getDocs(q);
+      const docs = snap.docs;
+      const hasMoreData = docs.length > PAGE_SIZE;
+      const items = docs.slice(0, PAGE_SIZE).map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as Product[];
+
+      if (isInitial) {
+        setAllProducts(items);
+      } else {
+        setAllProducts((prev) => [...prev, ...items]);
+      }
+
+      setLastDoc(docs[Math.min(PAGE_SIZE, docs.length) - 1] || null);
+      setHasMore(hasMoreData);
+    } catch (err) {
+      console.error("Error loading products:", err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }
+
+  const handleLoadMore = useCallback(() => {
+    loadProducts(false);
+  }, [lastDoc]);
+
   const filteredProducts = useMemo(() => {
-    const list = products ?? [];
-    return list.filter((p) => {
+    return allProducts.filter((p) => {
       const lower = searchTerm.toLowerCase();
       const matchSearch =
         !searchTerm ||
@@ -73,10 +131,10 @@ export default function ProductsPage() {
       const matchCategory = selectedCategory === "all" || p.categoryId === selectedCategory;
       return matchSearch && matchCategory;
     });
-  }, [products, searchTerm, selectedCategory]);
+  }, [allProducts, searchTerm, selectedCategory]);
 
   const getProductCount = (categoryId: string) => {
-    return (products ?? []).filter((p) => p.categoryId === categoryId).length;
+    return allProducts.filter((p) => p.categoryId === categoryId).length;
   };
 
   const displayCategories =
@@ -112,7 +170,7 @@ export default function ProductsPage() {
                   selectedCategory === "all" ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                All ({(products ?? []).length})
+                All ({allProducts.length})
               </button>
               {visibleCategories.map((cat) => (
                 <button
@@ -153,7 +211,7 @@ export default function ProductsPage() {
           </p>
         </div>
 
-        {isLoading || categoriesLoading ? (
+        {loading || categoriesLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
             {Array(10).fill(0).map((_, i) => (
               <div key={i} className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-pulse">
@@ -176,11 +234,30 @@ export default function ProductsPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={{ ...product, discountPercentage: product.mrp && product.mrp > product.price ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0 }} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={{ ...product, discountPercentage: product.mrp && product.mrp > product.price ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0 }} />
+              ))}
+            </div>
+
+            {hasMore && (
+              <div className="text-center pt-6 pb-4">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition disabled:opacity-50 shadow-sm"
+                >
+                  {loadingMore ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                  {loadingMore ? "Loading..." : "Load More"}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

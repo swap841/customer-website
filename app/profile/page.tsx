@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { getAuth, signOut, User } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebaseClient";
 import {
   collection,
   doc,

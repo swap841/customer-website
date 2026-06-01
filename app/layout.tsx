@@ -8,6 +8,8 @@ import { ThemeProvider } from "../lib/themeProvider";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+import DynamicBranding from "@/components/DynamicBranding";
+import StoreStatusGate from "@/components/StoreStatusGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,19 +22,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "My Store Grocery — Fresh Groceries Delivered Fast",
+  title: "My Store — Fresh Groceries Delivered Fast",
   description:
-    "Order farm-fresh organic produce, daily essentials & household items online. Fast delivery to your doorstep within 24 hours. Serving Satara & nearby areas.",
+    "Order farm-fresh organic produce, daily essentials & household items online. Fast delivery to your doorstep within 24 hours.",
   keywords: [
     "grocery", "delivery", "fresh produce", "organic", "online grocery",
     "My Store", "farm fresh", "Satara", "India",
   ],
   openGraph: {
-    title: "My Store Grocery — Fresh Groceries Delivered Fast",
+    title: "My Store — Fresh Groceries Delivered Fast",
     description:
       "Order farm-fresh organic produce, daily essentials & household items online. Fast delivery to your doorstep within 24 hours.",
     type: "website",
-    siteName: "My Store Grocery",
+    siteName: "My Store",
   },
 };
 
@@ -49,10 +51,13 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <CartProvider>
-              <Navbar />
-              <main className="pt-16 md:pt-16 min-h-screen">{children}</main>
-              <Footer />
-              <CartDrawer />
+              <DynamicBranding />
+              <StoreStatusGate>
+                <Navbar />
+                <main className="pt-16 md:pt-16 min-h-screen">{children}</main>
+                <Footer />
+                <CartDrawer />
+              </StoreStatusGate>
               <Toaster
                 position="bottom-center"
                 toastOptions={{

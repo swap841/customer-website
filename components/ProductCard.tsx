@@ -3,7 +3,7 @@
 import { useCart } from "@/components/CartContext";
 import { useWishlist } from "@/hooks/useWishlist";
 import Link from "next/link";
-import { Plus, Minus, Heart, Star } from "lucide-react";
+import { Plus, Minus, Heart, Star, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { getAuth } from "firebase/auth";
@@ -32,7 +32,7 @@ function Stars({ average }: { average: number }) {
         <Star
           key={s}
           size={12}
-          className={s <= Math.round(average) ? "fill-amber-400 text-amber-400" : "text-gray-300"}
+          className={s <= Math.round(average) ? "fill-amber-400 text-amber-400" : "text-slate-300"}
         />
       ))}
     </div>
@@ -84,13 +84,31 @@ export default function ProductCard({ product }: ProductCardProps) {
   const outOfStock = product.stock !== undefined && product.stock <= 0;
 
   return (
-    <div className="w-full bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between relative">
-      <Link href={`/products/${product.id}`} className="block w-full">
-        <div className="relative h-40 sm:h-48 bg-gray-50">
+    <div className="stitch-card group cursor-pointer">
+      <Link href={`/products/${product.id}`}>
+        <div className="relative overflow-hidden">
+          {product.imageUrl ? (
+            <Image
+              src={product.imageUrl}
+              alt={product.name}
+              width={400}
+              height={400}
+              className="product-image"
+            />
+          ) : (
+            <div className="w-full h-48 flex items-center justify-center text-slate-400 bg-slate-50">No Image</div>
+          )}
+
           {isDiscounted && (
-            <div className="absolute top-2 left-2 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-md z-10">
+            <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
               {discountPercent}% OFF
-            </div>
+            </span>
+          )}
+
+          {!outOfStock && product.stock !== undefined && product.stock < 10 && product.stock > 0 && (
+            <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
+              Only {product.stock} left
+            </span>
           )}
 
           <button
@@ -99,77 +117,63 @@ export default function ProductCard({ product }: ProductCardProps) {
           >
             <Heart
               size={16}
-              className={isWishlisted(product.id) ? "fill-red-500 text-red-500" : "text-gray-500"}
+              className={isWishlisted(product.id) ? "fill-red-500 text-red-500" : "text-slate-500"}
             />
           </button>
 
-          {product.imageUrl ? (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              sizes="(max-width: 640px) 50vw, 15rem"
-              className="object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
-          )}
-
           {outOfStock && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
               <span className="bg-gray-900 text-white text-xs font-bold px-3 py-1 rounded">Sold Out</span>
-            </div>
-          )}
-
-          {!outOfStock && (
-            <div className="absolute bottom-2 right-2 z-10">
-              {quantity === 0 ? (
-                <button
-                  onClick={handleAddToCart}
-                  className="bg-white text-emerald-600 font-bold px-4 py-2 rounded-md shadow-md border-2 border-emerald-500 hover:bg-emerald-50 transition-colors uppercase text-sm"
-                >
-                  ADD
-                </button>
-              ) : (
-                <div className="flex items-center justify-between bg-emerald-500 text-white rounded w-20 sm:w-24 text-sm font-bold shadow-lg border-2 border-emerald-500">
-                  <button onClick={handleDecrement} className="w-1/3 p-1 hover:bg-emerald-600"><Minus size={14} /></button>
-                  <span className="w-1/3 text-center">{quantity}</span>
-                  <button onClick={handleIncrement} className="w-1/3 p-1 hover:bg-emerald-600"><Plus size={14} /></button>
-                </div>
-              )}
             </div>
           )}
         </div>
 
-        <div className="p-2 sm:p-3 pt-0">
+        <div className="p-4">
           {product.rating && product.rating.count > 0 && (
-            <div className="flex items-center gap-1 mt-2 mb-1">
-              <Stars average={product.rating.average} />
-              <span className="text-[10px] text-gray-400">({product.rating.count})</span>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-0.5">
+                <Stars average={product.rating.average} />
+                <span className="text-sm font-medium text-slate-700">{product.rating.average}</span>
+              </div>
+              <span className="text-xs text-slate-400">({product.rating.count})</span>
             </div>
           )}
 
-          <div className="flex items-center mt-1 mb-1">
-            <span className="inline-flex items-center px-3 py-1 mr-2 rounded-xl bg-white shadow-md border border-green-200">
-              <span className="text-xs sm:text-sm text-green-700 mr-1">₹</span>
-              <span className="text-lg sm:text-xl font-extrabold text-green-700">{product.price}</span>
-            </span>
-            {isDiscounted && <span className="text-xs sm:text-sm text-gray-400 line-through">₹{mrp}</span>}
-          </div>
-
-          <h3 className="text-sm sm:text-base font-bold text-gray-800 leading-snug mb-1 line-clamp-2">
-            {product.name}
-          </h3>
+          <h3 className="font-semibold text-slate-800 mb-1 line-clamp-1">{product.name}</h3>
 
           {product.weight != null && (
-            <p className="text-xs sm:text-sm text-gray-500 font-medium">
+            <p className="text-xs text-slate-400 mb-2">
               {product.weight}{product.unit || "g"}
             </p>
           )}
 
-          {!outOfStock && product.stock !== undefined && product.stock <= (product.lowStockThreshold ?? 5) && (
-            <p className="text-[10px] text-orange-600 font-semibold mt-1">Only {product.stock} left</p>
-          )}
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-xl font-bold text-emerald-600">₹{product.price}</span>
+              {isDiscounted && (
+                <span className="text-sm text-slate-400 line-through ml-2">₹{mrp}</span>
+              )}
+            </div>
+
+            {!outOfStock && (
+              <>
+                {quantity === 0 ? (
+                  <button
+                    onClick={handleAddToCart}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-full transition-all active:scale-95"
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                  </button>
+                ) : (
+                  <div className="flex items-center bg-emerald-500 text-white rounded-lg overflow-hidden">
+                    <button onClick={handleDecrement} className="p-2 hover:bg-emerald-600"><Minus size={14} /></button>
+                    <span className="px-3 font-bold text-sm">{quantity}</span>
+                    <button onClick={handleIncrement} className="p-2 hover:bg-emerald-600"><Plus size={14} /></button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </Link>
     </div>

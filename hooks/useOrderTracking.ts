@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebaseClient';
-import type { Order } from '../../shared/types';
+import type { Order } from '@/shared/models';
 
 export interface OrderStatusDisplay {
   label: string;

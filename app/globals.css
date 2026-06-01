@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --primary: #059669;
+  --primary-light: #d1fae5;
+  --primary-dark: #047857;
+  --surface: #ffffff;
+  --text-secondary: #64748b;
 }
 
 @theme inline {
@@ -38,6 +43,37 @@ html {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #a3a3a3;
+}
+
+/* ─── Google Stitch Design System ─── */
+@layer components {
+  .glass-nav {
+    @apply bg-white/80 backdrop-blur-md border-b border-slate-200/50 sticky top-0 z-50;
+  }
+
+  .stitch-card {
+    @apply bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+  }
+
+  .stitch-button {
+    @apply bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-full px-6 py-2.5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .stitch-button-outline {
+    @apply border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 font-medium rounded-full px-6 py-2.5 transition-all;
+  }
+
+  .stitch-input {
+    @apply w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all;
+  }
+
+  .product-image {
+    @apply w-full h-48 object-cover rounded-t-2xl transition-transform duration-300 group-hover:scale-105;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold text-slate-800 mb-4 flex items-center justify-between;
+  }
 }
 
 /* ─── Print Styles ─── */

@@ -1,25 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, limit, startAfter, getDocs, onSnapshot, doc, getDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import {
-  Package,
-  Clock,
-  Truck,
-  CheckCircle2,
-  AlertCircle,
-  XCircle,
-  ChevronRight,
-  Loader2,
-  Hash,
-  IndianRupee,
-  ShoppingBag,
-  Calendar,
-  ArrowLeft,
-  ShieldCheck,
+  Package, Clock, Truck, CheckCircle2, AlertCircle, XCircle,
+  ChevronRight, Loader2, Hash, IndianRupee, ShoppingBag, Calendar, ArrowLeft, ShieldCheck, ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -52,12 +40,18 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: any }> = 
   Cancelled: { color: "text-red-700", bg: "bg-red-100", icon: XCircle },
 };
 
+const PAGE_SIZE = 10;
+
 export default function OrdersPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
+  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     const auth = getAuth();
@@ -70,17 +64,35 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (!user) return;
+    loadOrders(true);
+  }, [user]);
 
-    const q = query(
-      collection(db, "users", user.uid, "orders"),
-      orderBy("createdAt", "desc")
-    );
+  async function loadOrders(isInitial: boolean) {
+    if (!user) return;
+    if (isInitial) setLoading(true);
+    else setLoadingMore(true);
 
-    const unsub = onSnapshot(q, (snap) => {
-      const list: Order[] = [];
-      snap.forEach((d) => {
+    try {
+      let q = query(
+        collection(db, "users", user.uid, "orders"),
+        orderBy("createdAt", "desc"),
+        limit(PAGE_SIZE + 1)
+      );
+      if (!isInitial && lastDoc) {
+        q = query(
+          collection(db, "users", user.uid, "orders"),
+          orderBy("createdAt", "desc"),
+          startAfter(lastDoc),
+          limit(PAGE_SIZE + 1)
+        );
+      }
+
+      const snap = await getDocs(q);
+      const docs = snap.docs;
+      const hasMoreData = docs.length > PAGE_SIZE;
+      const items = docs.slice(0, PAGE_SIZE).map((d) => {
         const data = d.data();
-        list.push({
+        return {
           id: d.id,
           status: data.status || "Pending",
           totalAmount: data.totalAmount || 0,
@@ -93,14 +105,34 @@ export default function OrdersPage() {
           estimatedDeliveryDate: data.estimatedDeliveryDate,
           payment: data.payment,
           address: data.address,
-        });
+        } as Order;
       });
-      setOrders(list);
-      setLoading(false);
-    });
 
-    return () => unsub();
-  }, [user]);
+      if (isInitial) {
+        setOrders(items);
+      } else {
+        setOrders((prev) => [...prev, ...items]);
+      }
+
+      setLastDoc(docs[PAGE_SIZE - 1] || null);
+      setHasMore(hasMoreData);
+      if (isInitial) {
+        try {
+          const countSnap = await getDocs(query(collection(db, "users", user.uid, "orders")));
+          setTotalCount(countSnap.size);
+        } catch { /* ignore count errors */ }
+      }
+    } catch (err) {
+      console.error("Error loading orders:", err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }
+
+  const handleLoadMore = useCallback(() => {
+    loadOrders(false);
+  }, [user, lastDoc]);
 
   if (authChecking || !user) {
     return (
@@ -135,7 +167,7 @@ export default function OrdersPage() {
           </button>
           <div>
             <h1 className="text-2xl font-black text-zinc-900">My Orders</h1>
-            <p className="text-sm text-zinc-500">{orders.length} order{orders.length !== 1 ? "s" : ""}</p>
+            <p className="text-sm text-zinc-500">{totalCount} order{totalCount !== 1 ? "s" : ""}</p>
           </div>
         </div>
 
@@ -185,31 +217,40 @@ export default function OrdersPage() {
                     </div>
                     <ChevronRight className="w-5 h-5 text-zinc-300 shrink-0 mt-1" />
                   </div>
-
-                  <p className="text-xs text-zinc-600 line-clamp-1 mb-2">
-                    {itemSummary}{extra}
-                  </p>
-
+                  <p className="text-xs text-zinc-600 line-clamp-1 mb-2">{itemSummary}{extra}</p>
                   <div className="flex items-center justify-between text-xs text-zinc-500">
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-1">
-                        <IndianRupee className="w-3 h-3" />
-                        {order.totalAmount}
+                        <IndianRupee className="w-3 h-3" />{order.totalAmount}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatDate(order.createdAt)}
+                        <Calendar className="w-3 h-3" />{formatDate(order.createdAt)}
                       </span>
                     </div>
                     {order.payment?.method && (
-                      <span className="text-[10px] uppercase font-bold text-zinc-400">
-                        {order.payment.method}
-                      </span>
+                      <span className="text-[10px] uppercase font-bold text-zinc-400">{order.payment.method}</span>
                     )}
                   </div>
                 </Link>
               );
             })}
+
+            {hasMore && (
+              <div className="text-center pt-2 pb-4">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition disabled:opacity-50 shadow-sm"
+                >
+                  {loadingMore ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                  {loadingMore ? "Loading..." : "Load More Orders"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

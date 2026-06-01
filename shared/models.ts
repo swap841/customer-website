@@ -1,39 +1,37 @@
-export interface Rating {
-  average: number;
-  count: number;
-}
-
 export interface Product {
   id: string;
   name: string;
   price: number;
   mrp?: number;
+  discountPercentage?: number;
   imageUrl?: string;
-  description?: string;
   weight?: number;
   unit?: string;
   stock?: number;
   categoryId?: string;
-  active?: boolean;
-  rating?: Rating;
   lowStockThreshold?: number;
+  rating?: { average: number; count: number };
+  active?: boolean;
+  description?: string;
+}
+
+export interface Banner {
+  id: string;
+  active?: boolean;
+  imageUrl?: string;
+  title?: string;
+  subtitle?: string;
+  link?: string;
+  order?: number;
 }
 
 export interface Category {
   id: string;
   name: string;
-  displayName?: string;
-  imageUrl?: string;
+  slug?: string;
   active?: boolean;
   order?: number;
-  icon?: string;
-}
-
-export interface Banner {
-  id: string;
-  imageUrl: string;
-  link: string;
-  active: boolean;
+  imageUrl?: string;
 }
 
 export interface ContactInfo {
@@ -48,50 +46,31 @@ export interface ContactInfo {
   taxPercentage: number;
   deliveryFeePerKm: number;
   freeDeliveryAbove: number;
-  socialLinks?: Record<string, string>;
+  tagline: string;
+  copyrightText: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  aboutText: string;
   privacyPolicy?: string;
-  refundPolicy?: string;
   shippingPolicy?: string;
+  refundPolicy?: string;
   termsAndConditions?: string;
-  tagline?: string;
-  copyrightText?: string;
-  heroTitle?: string;
-  heroSubtitle?: string;
-  aboutText?: string;
+  ownerFcmToken?: string;
+  ownerPhone?: string;
 }
 
 export interface Order {
   id: string;
   userId: string;
+  status: string;
   items: OrderItem[];
-  address: OrderAddress;
-  status: OrderStatus;
   totalAmount: number;
-  totalWeight: number;
   payment: OrderPayment;
-  areaCode: string;
-  assignedWorkerId?: string;
-  assignedDeliveryBoyId?: string;
-  assignedBasketId?: string;
-  outOfCity: boolean;
-  estimatedDeliveryDate?: string;
-  verificationCode?: string;
-  packedAt?: string;
-  outForDeliveryAt?: string;
-  deliveredAt?: string;
-  cancelledAt?: string;
-  cancelReason?: string;
-  couponApplied?: string;
-  deliveryTimeSlot?: string;
-  createdAt: string;
-  rejectionHistory?: RejectionEntry[];
-  ticketContactId?: string;
-}
-
-export interface RejectionEntry {
-  rejectedBy: string;
-  reason: string;
-  at: string;
+  shippingAddress: OrderAddress;
+  createdAt: { toMillis(): number } | string;
+  updatedAt?: { toMillis(): number } | string;
+  deliveryBoyId?: string;
+  note?: string;
 }
 
 export interface OrderItem {
@@ -99,37 +78,25 @@ export interface OrderItem {
   name: string;
   quantity: number;
   price: number;
-  weight?: number;
   imageUrl?: string;
+}
+
+export interface OrderPayment {
+  method: "cod" | "online";
+  status: "pending" | "paid" | "refunded";
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
 }
 
 export interface OrderAddress {
   name: string;
   phone: string;
   addressLine: string;
-  pincode?: string;
-  city?: string;
-  lat?: number | null;
-  lng?: number | null;
+  city: string;
+  state: string;
+  pincode: string;
+  landmark?: string;
 }
-
-export interface OrderPayment {
-  method: string;
-  status: string;
-  razorpayPaymentId?: string;
-  razorpayOrderId?: string;
-}
-
-export type OrderStatus =
-  | "Pending"
-  | "Packing"
-  | "Ready to Dispatch"
-  | "Assigned"
-  | "Accepted"
-  | "Out for Delivery"
-  | "Awaiting Verification"
-  | "Delivered"
-  | "Cancelled";
 
 export interface Review {
   id: string;
@@ -138,18 +105,5 @@ export interface Review {
   userName: string;
   rating: number;
   comment: string;
-  createdAt: string;
-}
-
-export interface Coupon {
-  id?: string;
-  code: string;
-  discountType: "percentage" | "fixed";
-  discountValue: number;
-  minOrderAmount: number;
-  maxDiscount?: number;
-  expiryDate: any;
-  usageLimit: number;
-  usedCount: number;
-  active: boolean;
+  createdAt?: { toMillis(): number } | string;
 }

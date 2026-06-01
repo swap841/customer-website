@@ -25,6 +25,7 @@ import {
   Mail,
   Info,
   ChevronDown,
+  MessageCircle,
 } from "lucide-react";
 import { useContactInfo } from "@/hooks/useContactInfo";
 
@@ -66,6 +67,7 @@ export default function Navbar() {
     { label: "Home", href: "/", icon: Home },
     { label: "Products", href: "/products", icon: ShoppingBag },
     { label: "About", href: "/about", icon: Info },
+    { label: "FAQ", href: "/faq", icon: MessageCircle },
     { label: "Contact", href: "/contact", icon: Phone },
   ];
 

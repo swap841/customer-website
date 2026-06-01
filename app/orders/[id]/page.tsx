@@ -26,6 +26,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+
 const ORDER_STEPS = [
   { key: "Pending", label: "Order Placed", icon: Package },
   { key: "Packing", label: "Packing", icon: Clock },
@@ -198,6 +199,33 @@ export default function OrderTrackingPage() {
               </div>
             </div>
           )}
+
+          {!isCancelled && (currentStatus === "Pending" || currentStatus === "Packing") && (
+            <button
+              onClick={async () => {
+                const confirmed = window.confirm("Are you sure you want to cancel this order? Your items will be restocked and a refund will be initiated if paid online.");
+                if (!confirmed) return;
+                try {
+                  const res = await fetch("/api/orders/cancel", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ orderId, userId: user?.uid }),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    toast.success("Order cancelled successfully");
+                  } else {
+                    toast.error(data.error || "Failed to cancel order");
+                  }
+                } catch {
+                  toast.error("Network error. Please try again.");
+                }
+              }}
+              className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 text-white px-4 py-2.5 text-sm font-bold hover:bg-red-600 transition shadow-sm"
+            >
+              Cancel Order
+            </button>
+          )}
         </div>
 
         {/* Verification Code Display */}
@@ -342,6 +370,7 @@ export default function OrderTrackingPage() {
                     createdAt: new Date().toISOString(),
                   });
                   setReviewSubmitted(true);
+                  toast.success("Review submitted! Thank you for your feedback.");
                 } catch {
                   toast.error("Failed to submit review");
                 } finally {
@@ -391,7 +420,7 @@ export default function OrderTrackingPage() {
                     createdAt: new Date().toISOString(),
                   });
                   setReturnSubmitted(true);
-                  toast.success("Return request submitted!");
+                  toast.success("Return request submitted! We'll contact you shortly.");
                 } catch {
                   toast.error("Failed to submit return request");
                 } finally {
@@ -572,6 +601,7 @@ export default function OrderTrackingPage() {
                           status: "in-progress",
                         });
                         setTicketReplyText("");
+                        toast.success("Reply sent!");
                       } catch {
                         toast.error("Failed to send reply. Please try again.");
                       }
@@ -593,6 +623,7 @@ export default function OrderTrackingPage() {
                         status: "in-progress",
                       });
                       setTicketReplyText("");
+                      toast.success("Reply sent!");
                     } catch {
                       toast.error("Failed to send reply. Please try again.");
                     }
