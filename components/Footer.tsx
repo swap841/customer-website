@@ -24,10 +24,11 @@ const footerLinks = {
     { label: "Careers", href: "/contact" },
   ],
   legal: [
-    { label: "Privacy Policy", href: "/privacy-policy" },
-    { label: "Terms & Conditions", href: "/terms-and-conditions" },
-    { label: "Refund Policy", href: "/refund-policy" },
-    { label: "Shipping Policy", href: "/shipping-policy" },
+    { label: "Privacy Policy", href: "/policies/privacy" },
+    { label: "Terms & Conditions", href: "/policies/terms" },
+    { label: "Refund Policy", href: "/policies/refund" },
+    { label: "Shipping Policy", href: "/policies/shipping" },
+    { label: "Contact Us", href: "/policies/contact" },
   ],
 };
 
