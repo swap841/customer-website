@@ -77,10 +77,15 @@ export default function Footer() {
                 <Mail className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span>{contactInfo.email}</span>
               </a>
-              <div className="flex items-start gap-2 text-xs text-zinc-400">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                <span>{contactInfo.address}</span>
-              </div>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address || "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 text-xs text-zinc-400 hover:text-emerald-400 transition-colors"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>{contactInfo.address}</span>
+                </a>
             </div>
 
             {/* Social Links */}

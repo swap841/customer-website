@@ -166,8 +166,13 @@ export default function ContactPage() {
               </div>
             </a>
 
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 p-5 rounded-2xl flex items-start gap-4 shadow-xs">
-              <div className="w-10 h-10 bg-violet-500/10 rounded-xl flex items-center justify-center text-violet-500 shrink-0">
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address || "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 p-5 rounded-2xl flex items-start gap-4 shadow-xs hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700 transition-all group"
+            >
+              <div className="w-10 h-10 bg-violet-500/10 rounded-xl flex items-center justify-center text-violet-500 shrink-0 group-hover:bg-violet-500/20 transition-colors">
                 <MapPin className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -176,7 +181,7 @@ export default function ContactPage() {
                   {contactInfo.address}
                 </p>
               </div>
-            </div>
+            </a>
           </div>
 
           {/* AI Chat + Contact Form */}

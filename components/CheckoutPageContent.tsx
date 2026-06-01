@@ -621,7 +621,7 @@ export default function CheckoutPageContent() {
                 <div className="bg-blue-100 p-2 rounded-lg mr-3"><Store className="w-5 h-5 text-blue-600" /></div>
                 <div>
                   <h3 className="font-semibold text-blue-800">Store Pickup Information</h3>
-                  <p className="text-blue-700 text-sm mt-1 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {contactInfo.address || "Store address not set"}</p>
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address || "Store address not set")}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 text-sm mt-1 flex items-center gap-1 hover:underline"><MapPin className="w-3.5 h-3.5" /> {contactInfo.address || "Store address not set"}</a>
                   <p className="text-blue-600 text-sm mt-2 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Pickup Hours: 9:00 AM - 9:00 PM</p>
                 </div>
               </div>
