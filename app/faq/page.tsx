@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, MessageCircle, ChevronDown, ChevronUp, Bot, Send } from "lucide-react";
+import { Search, MessageCircle, ChevronDown, ChevronUp, Bot, Send, User, Loader2 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
+import { getAIResponse, getGeminiResponse, setGeminiApiKey, ChatMessage } from "@/lib/aiAgent";
+import { useAppConfig } from "@/hooks/useAppConfig";
+import { useContactInfo } from "@/hooks/useContactInfo";
 
 interface FaqItem {
   id: string;
@@ -16,10 +19,12 @@ export default function FaqPage() {
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState(false);
-  const [messages, setMessages] = useState<{ role: "user" | "bot"; text: string }[]>([]);
+  const [messages, setMessages] = useState<{ role: string; text: string }[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const { data: appConfig } = useAppConfig();
+  const { contactInfo } = useContactInfo();
 
   useEffect(() => {
     (async () => {
@@ -33,31 +38,43 @@ export default function FaqPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing]);
 
+  useEffect(() => {
+    if (appConfig?.ai?.geminiApiKey) {
+      setGeminiApiKey(appConfig.ai.geminiApiKey);
+    }
+  }, [appConfig]);
+
   const filtered = faqs.filter(
     (f) =>
       f.question.toLowerCase().includes(search.toLowerCase()) ||
       f.answer.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const q = input.trim();
     if (!q) return;
     setMessages((prev) => [...prev, { role: "user", text: q }]);
     setInput("");
     setTyping(true);
-    setTimeout(() => {
-      const hits = faqs.filter(
-        (f) =>
-          f.question.toLowerCase().includes(q.toLowerCase()) ||
-          f.answer.toLowerCase().includes(q.toLowerCase())
-      );
-      const reply =
-        hits.length > 0
-          ? hits.map((h) => `**${h.question}**\n${h.answer}`).join("\n\n")
-          : "Sorry, I couldn't find an answer to your question. Please try rephrasing or contact our support team.";
-      setMessages((prev) => [...prev, { role: "bot", text: reply }]);
-      setTyping(false);
-    }, 1200);
+
+    let response;
+    if (appConfig?.ai?.geminiApiKey) {
+      const ctx = {
+        storeName: appConfig?.branding?.storeName || contactInfo?.storeName,
+        storeAddress: appConfig?.contact?.address || contactInfo?.address,
+        contactPhone: appConfig?.contact?.phone || contactInfo?.phone,
+        contactEmail: appConfig?.contact?.email || contactInfo?.email,
+        faqEntries: faqs.map(f => ({ question: f.question, answer: f.answer })),
+      };
+      const convHistory = messages.map(m => ({ role: m.role, content: m.text }));
+      response = await getGeminiResponse(q, ctx, convHistory);
+    }
+    if (!response) {
+      response = getAIResponse(q);
+    }
+
+    setMessages((prev) => [...prev, { role: "assistant", text: response.response + (response.steps?.length ? "\n\n" + response.steps.map((s: string) => "• " + s).join("\n") : "") }]);
+    setTyping(false);
   };
 
   return (
@@ -70,7 +87,7 @@ export default function FaqPage() {
             </h1>
             <p className="mt-2 text-sm text-gray-500">
               {chatMode
-                ? "Ask a question and we'll match it to our FAQ"
+                ? "Powered by AI — ask me anything about our store"
                 : "Frequently asked questions"}
             </p>
           </div>
@@ -87,7 +104,7 @@ export default function FaqPage() {
               </>
             ) : (
               <>
-                <Bot size={18} /> Chat with us
+                <Bot size={18} /> AI Chat
               </>
             )}
           </button>
@@ -148,27 +165,24 @@ export default function FaqPage() {
                     <Bot size={18} className="text-emerald-700" />
                   </div>
                   <div className="max-w-[80%] rounded-[18px] rounded-tl-sm bg-emerald-50 px-4 py-3 text-sm text-gray-700">
-                    Hi! Ask me anything about our store, orders, delivery, or products.
+                    Hi! I'm your AI assistant. Ask me about orders, delivery, products, or anything about our store!
                   </div>
                 </div>
               )}
               {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`flex items-start gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}
-                >
-                  {m.role === "bot" && (
+                <div key={i} className={`flex items-start gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
+                  {m.role === "bot" || m.role === "assistant" ? (
                     <div className="shrink-0 w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center">
                       <Bot size={18} className="text-emerald-700" />
                     </div>
+                  ) : (
+                    <div className="shrink-0 w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
+                      <User size={18} className="text-blue-600" />
+                    </div>
                   )}
-                  <div
-                    className={`max-w-[80%] rounded-[18px] px-4 py-3 text-sm leading-6 whitespace-pre-line ${
-                      m.role === "user"
-                        ? "rounded-tr-sm bg-emerald-600 text-white"
-                        : "rounded-tl-sm bg-gray-100 text-gray-700"
-                    }`}
-                  >
+                  <div className={`max-w-[80%] rounded-[18px] px-4 py-3 text-sm leading-6 whitespace-pre-line ${
+                    m.role === "user" ? "rounded-tr-sm bg-emerald-600 text-white" : "rounded-tl-sm bg-gray-100 text-gray-700"
+                  }`}>
                     {m.text}
                   </div>
                 </div>
@@ -200,10 +214,10 @@ export default function FaqPage() {
                 />
                 <button
                   onClick={handleSend}
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || typing}
                   className="shrink-0 rounded-full bg-emerald-600 p-3 text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send size={18} />
+                  {typing ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                 </button>
               </div>
             </div>

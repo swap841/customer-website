@@ -4,6 +4,110 @@ export interface ChatMessage {
   steps?: string[];
 }
 
+// Gemini API support
+const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_URL = (key: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
+
+interface GeminiSystemContext {
+  storeName: string;
+  storeAddress: string;
+  contactPhone: string;
+  contactEmail: string;
+  deliveryRadius: number;
+  minOrderValue: number;
+  deliveryCharge: number;
+  freeDeliveryAbove: number;
+  faqEntries: { question: string; answer: string }[];
+}
+
+function buildSystemPrompt(ctx: GeminiSystemContext): string {
+  return `You are a helpful customer support assistant for "${ctx.storeName}". Answer concisely and helpfully.
+
+STORE INFO:
+- Name: ${ctx.storeName}
+- Address: ${ctx.storeAddress}
+- Phone: ${ctx.contactPhone}
+- Email: ${ctx.contactEmail}
+- Delivery radius: ${ctx.deliveryRadius} km
+- Minimum order: ₹${ctx.minOrderValue}
+- Delivery charge: ₹${ctx.deliveryCharge}
+- Free delivery above: ₹${ctx.freeDeliveryAbove}
+
+FAQ:
+${ctx.faqEntries.map(f => `Q: ${f.question}\nA: ${f.answer}`).join("\n\n")}
+
+CAPABILITIES:
+- Answer questions about store, products, orders, delivery, payments
+- Guide users to report defective/missing/wrong items
+- Help with returns, refunds, cancellations
+- Direct users to contact support for complex issues
+- If user wants to speak to a human or has a complaint, tell them to fill the contact form
+
+RULES:
+- Be friendly and concise
+- If you don't know something, say so and offer to connect with support
+- Never make up pricing or policy details
+- For order-specific queries, tell users to check their Profile page
+- Use simple language - no technical jargon`;
+}
+
+let geminiKey = "";
+
+export function setGeminiApiKey(key: string) {
+  geminiKey = key;
+}
+
+export async function getGeminiResponse(
+  input: string,
+  ctx: Partial<GeminiSystemContext>,
+  conversationHistory: { role: string; content: string }[]
+): Promise<{ response: string; steps: string[] } | null> {
+  if (!geminiKey) return null;
+
+  const defaultCtx: GeminiSystemContext = {
+    storeName: "My Store Grocery",
+    storeAddress: "Store address not set",
+    contactPhone: "Not available",
+    contactEmail: "Not available",
+    deliveryRadius: 20,
+    minOrderValue: 49,
+    deliveryCharge: 29,
+    freeDeliveryAbove: 299,
+    faqEntries: [],
+    ...ctx,
+  };
+
+  const system = buildSystemPrompt(defaultCtx);
+  const messages = [
+    { role: "user", parts: [{ text: system }] },
+    { role: "model", parts: [{ text: "Understood. I'm ready to help customers." }] },
+    ...conversationHistory.map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    })),
+    { role: "user", parts: [{ text: input }] },
+  ];
+
+  try {
+    const res = await fetch(GEMINI_URL(geminiKey), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: messages }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    if (!text) return null;
+    return {
+      response: text,
+      steps: [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 const greetings = ["hi", "hello", "hey", "help", "start", "good morning", "good evening", "good afternoon", "hii", "hlo", "hy", "helloo"];
 
 interface Pattern {

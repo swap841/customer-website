@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import DynamicBranding from "@/components/DynamicBranding";
 import StoreStatusGate from "@/components/StoreStatusGate";
+import ChatBot from "@/components/ChatBot";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -57,6 +58,7 @@ export default function RootLayout({
                 <main className="pt-16 md:pt-24 min-h-screen">{children}</main>
                 <Footer />
                 <CartDrawer />
+                <ChatBot />
               </StoreStatusGate>
               <Toaster
                 position="bottom-center"

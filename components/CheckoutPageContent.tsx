@@ -480,9 +480,9 @@ export default function CheckoutPageContent() {
           toast.success("Order placed successfully!");
           if (clearCart) clearCart();
           router.push(`/order-success?orderId=${orderId}`);
-        } catch (error) {
+        } catch (error: any) {
           console.error("Order failed:", error);
-          toast.error("Failed to place order. Please try again.");
+          toast.error(error?.message || "Failed to place order. Please try again.");
         }
       }
     } catch (error) {
