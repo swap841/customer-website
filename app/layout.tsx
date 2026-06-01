@@ -54,7 +54,7 @@ export default function RootLayout({
               <DynamicBranding />
               <StoreStatusGate>
                 <Navbar />
-                <main className="pt-16 md:pt-16 min-h-screen">{children}</main>
+                <main className="pt-16 md:pt-24 min-h-screen">{children}</main>
                 <Footer />
                 <CartDrawer />
               </StoreStatusGate>

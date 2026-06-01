@@ -74,13 +74,15 @@ export default function OrdersPage() {
 
     try {
       let q = query(
-        collection(db, "users", user.uid, "orders"),
+        collection(db, "orders"),
+        where("userId", "==", user.uid),
         orderBy("createdAt", "desc"),
         limit(PAGE_SIZE + 1)
       );
       if (!isInitial && lastDoc) {
         q = query(
-          collection(db, "users", user.uid, "orders"),
+          collection(db, "orders"),
+          where("userId", "==", user.uid),
           orderBy("createdAt", "desc"),
           startAfter(lastDoc),
           limit(PAGE_SIZE + 1)
@@ -118,7 +120,7 @@ export default function OrdersPage() {
       setHasMore(hasMoreData);
       if (isInitial) {
         try {
-          const countSnap = await getDocs(query(collection(db, "users", user.uid, "orders")));
+          const countSnap = await getDocs(query(collection(db, "orders"), where("userId", "==", user.uid)));
           setTotalCount(countSnap.size);
         } catch { /* ignore count errors */ }
       }

@@ -5,6 +5,7 @@ import { collection, getDocs, query, where, limit, startAfter, orderBy } from "f
 import { db } from "@/lib/firebaseClient";
 import ProductCard from "@/components/ProductCard";
 import { Search, Loader2, ChevronDown } from "lucide-react";
+import { VoiceSearch } from "@/components/VoiceSearch";
 import type { Product } from "@/shared/models";
 
 interface Category {
@@ -148,7 +149,7 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-16 z-20">
+      <div className="bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-16 md:top-24 z-20">
         <div className="max-w-7xl mx-auto px-3 py-2">
           <div className="mb-2">
             <div className="relative">
@@ -158,8 +159,11 @@ export default function ProductsPage() {
                 placeholder='Search "apple, fruits, snacks..."'
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50/80 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm"
+                className="w-full pl-10 pr-12 py-2 bg-gray-50/80 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm"
               />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <VoiceSearch onResult={(text) => setSearchTerm(text)} />
+              </div>
             </div>
           </div>
           <div className="mt-2">

@@ -6,7 +6,7 @@ import { useCart } from "./CartContext";
 import { getAuth } from "firebase/auth";
 import { getAreaCode } from "../utils/getAreaCode";
 import { getDistanceKm } from "@/utils/distance";
-import { doc, setDoc, collection } from "firebase/firestore";
+import { doc, setDoc, collection, writeBatch, increment } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { validateCoupon } from "../utils/coupon";
 import TimeSlotPicker, { type TimeSlot } from "./TimeSlotPicker";
@@ -64,6 +64,8 @@ interface RazorpayInstance {
   open: () => void;
   on: (event: string, callback: () => void) => void;
 }
+
+const EXPRESS_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://grocery-server-10ct.onrender.com';
 
 export default function CheckoutPageContent() {
   const router = useRouter();
@@ -247,7 +249,7 @@ export default function CheckoutPageContent() {
         return;
       }
 
-      const res = await fetch("/api/razorpay/create-order", {
+      const res = await fetch(`${EXPRESS_URL}/api/razorpay/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: finalTotal, receipt: `receipt_${Date.now()}` }),
@@ -290,7 +292,7 @@ export default function CheckoutPageContent() {
         handler: async (response: RazorpayResponse) => {
           const paymentToastId = toast.loading("Verifying payment...");
           try {
-            const verifyRes = await fetch("/api/razorpay/verify-payment", {
+            const verifyRes = await fetch(`${EXPRESS_URL}/api/razorpay/verify-payment`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -445,25 +447,42 @@ export default function CheckoutPageContent() {
       if (paymentMethod === "Online") {
         await handleRazorpayPayment(orderData);
       } else {
-        const codRes = await fetch("/api/orders/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user.uid,
-            orderData,
-            couponCode: couponDiscount > 0 ? couponCode : null,
-          }),
-        });
-        const codData = await codRes.json();
-        if (codRes.ok && codData.success) {
-          if (address && deliveryOption === "delivery") {
-            saveAddress(address, location?.lat, location?.lng);
+        // COD - client-side batch write to orders + users/{uid}/orders collections
+        const batch = writeBatch(db);
+        const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const orderDataWithMeta = {
+          ...orderData,
+          id: orderId,
+          userId: user.uid,
+          status: "Pending",
+          payment: { method: "cod", status: "pending" },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        batch.set(doc(db, "orders", orderId), orderDataWithMeta);
+        batch.set(doc(db, "users", user.uid, "orders", orderId), orderDataWithMeta);
+
+        if (orderData.items && Array.isArray(orderData.items)) {
+          for (const item of orderData.items) {
+            if (item.productId) {
+              batch.update(doc(db, "products", item.productId), { stock: increment(-(item.quantity || 1)) });
+            }
           }
+        }
+
+        if (couponDiscount > 0 && couponCode) {
+          batch.update(doc(db, "coupons", couponCode.toUpperCase()), { usedCount: increment(1) });
+        }
+
+        try {
+          await batch.commit();
+          if (address && deliveryOption === "delivery") saveAddress(address, location?.lat, location?.lng);
           toast.success("Order placed successfully!");
           if (clearCart) clearCart();
-          router.push(`/order-success?orderId=${codData.orderId}`);
-        } else {
-          toast.error("Failed to save order.");
+          router.push(`/order-success?orderId=${orderId}`);
+        } catch (error) {
+          console.error("Order failed:", error);
+          toast.error("Failed to place order. Please try again.");
         }
       }
     } catch (error) {
