@@ -428,11 +428,15 @@ export default function ProfilePage() {
       {/* Left: Profile Edit */}
       <div className="w-full lg:w-1/3 bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl p-6 flex flex-col items-center border border-emerald-100/50">
         <div className="relative mb-4">
-          <div className="w-[120px] h-[120px] rounded-full ring-4 ring-emerald-200 shadow-lg bg-emerald-100 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-            </svg>
-          </div>
+          {user.photoURL ? (
+            <img src={user.photoURL} alt={customerData.name || "Profile"} className="w-[120px] h-[120px] rounded-full ring-4 ring-emerald-200 shadow-lg object-cover" />
+          ) : (
+            <div className="w-[120px] h-[120px] rounded-full ring-4 ring-emerald-200 shadow-lg bg-emerald-100 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+            </div>
+          )}
         </div>
 
         {/* Full Name Input */}
@@ -552,7 +556,7 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
-      </div>
+        </div>
 
       {/* Right: Orders - Make it w-full on mobile, then w-2/3 on large screens */}
       <div className="w-full lg:w-2/3">
