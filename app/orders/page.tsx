@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { collection, query, orderBy, limit, startAfter, getDocs, onSnapshot, doc, getDoc, where } from "firebase/firestore";
+import { collection, query, getDocs, where } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import {
   Package, Clock, Truck, CheckCircle2, AlertCircle, XCircle,
-  ChevronRight, Loader2, Hash, IndianRupee, ShoppingBag, Calendar, ArrowLeft, ShieldCheck, ChevronDown,
+  ChevronRight, Loader2, Hash, IndianRupee, ShoppingBag, Calendar, ArrowLeft, ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -47,10 +47,7 @@ export default function OrdersPage() {
   const [user, setUser] = useState<any>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
-  const [lastDoc, setLastDoc] = useState<any>(null);
-  const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
@@ -64,35 +61,17 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (!user) return;
-    loadOrders(true);
+    loadOrders();
   }, [user]);
 
-  async function loadOrders(isInitial: boolean) {
+  async function loadOrders() {
     if (!user) return;
-    if (isInitial) setLoading(true);
-    else setLoadingMore(true);
+    setLoading(true);
 
     try {
-      let q = query(
-        collection(db, "orders"),
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc"),
-        limit(PAGE_SIZE + 1)
-      );
-      if (!isInitial && lastDoc) {
-        q = query(
-          collection(db, "orders"),
-          where("userId", "==", user.uid),
-          orderBy("createdAt", "desc"),
-          startAfter(lastDoc),
-          limit(PAGE_SIZE + 1)
-        );
-      }
-
+      const q = query(collection(db, "orders"), where("userId", "==", user.uid));
       const snap = await getDocs(q);
-      const docs = snap.docs;
-      const hasMoreData = docs.length > PAGE_SIZE;
-      const items = docs.slice(0, PAGE_SIZE).map((d) => {
+      const items = snap.docs.map((d) => {
         const data = d.data();
         return {
           id: d.id,
@@ -109,32 +88,19 @@ export default function OrdersPage() {
           address: data.address,
         } as Order;
       });
-
-      if (isInitial) {
-        setOrders(items);
-      } else {
-        setOrders((prev) => [...prev, ...items]);
-      }
-
-      setLastDoc(docs[PAGE_SIZE - 1] || null);
-      setHasMore(hasMoreData);
-      if (isInitial) {
-        try {
-          const countSnap = await getDocs(query(collection(db, "orders"), where("userId", "==", user.uid)));
-          setTotalCount(countSnap.size);
-        } catch { /* ignore count errors */ }
-      }
+      items.sort((a, b) => {
+        const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return db - da;
+      });
+      setOrders(items);
+      setTotalCount(items.length);
     } catch (err) {
       console.error("Error loading orders:", err);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
   }
-
-  const handleLoadMore = useCallback(() => {
-    loadOrders(false);
-  }, [user, lastDoc]);
 
   if (authChecking || !user) {
     return (
@@ -237,22 +203,6 @@ export default function OrdersPage() {
               );
             })}
 
-            {hasMore && (
-              <div className="text-center pt-2 pb-4">
-                <button
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition disabled:opacity-50 shadow-sm"
-                >
-                  {loadingMore ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                  {loadingMore ? "Loading..." : "Load More Orders"}
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
