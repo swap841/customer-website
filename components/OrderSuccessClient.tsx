@@ -32,9 +32,10 @@ interface OrderItem {
 interface OrderData {
   id: string;
   userId: string;
-  userName: string;
-  userPhone: string;
-  userEmail: string;
+  userName?: string;
+  userPhone?: string;
+  userEmail?: string;
+  address?: { name?: string; phone?: string; [key: string]: unknown };
   deliveryAddress: string;
   deliveryOption: "delivery" | "pickup";
   items: OrderItem[];
@@ -292,14 +293,14 @@ export default function OrderSuccessClient() {
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="rounded-3xl bg-emerald-50 p-4">
                     <p className="text-xs uppercase tracking-[0.24em] text-emerald-700 font-bold">Customer</p>
-                    <p className="text-sm text-gray-900 font-semibold mt-2">{order.userName}</p>
+                    <p className="text-sm text-gray-900 font-semibold mt-2">{order.userName || order.address?.name || "—"}</p>
                     <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
                       <Phone className="w-4 h-4 text-emerald-600" />
-                      {order.userPhone}
+                      {order.userPhone || order.address?.phone || "—"}
                     </p>
                     <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
                       <Mail className="w-4 h-4 text-emerald-600" />
-                      {order.userEmail}
+                      {order.userEmail || "—"}
                     </p>
                   </div>
 

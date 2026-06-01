@@ -1,6 +1,8 @@
 node_modules/
-.next/
-.env
 .env.local
-firebase-debug.log
-firebase.json.backup
+.env.production
+.next/
+out/
+build/
+*.tsbuildinfo
+*.log

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Bot, Send, Loader2, User, Mail, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { collection, addDoc, Timestamp, arrayUnion, doc, updateDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import { db } from "@/lib/firebaseClient";
 import { useContactInfo } from "@/hooks/useContactInfo";
 import { ChatMessage, getAIResponse } from "@/lib/aiAgent";
@@ -35,6 +36,16 @@ export default function ContactPage() {
     const text = input.trim();
     if (!text || loading) return;
 
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    // If user not signed in, can't create aiChats (rules require auth)
+    if (!user) {
+      toast.error("Please sign in to use chat");
+      setLoading(false);
+      return;
+    }
+
     const userMsg: ChatMessage = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
@@ -45,6 +56,7 @@ export default function ContactPage() {
       try {
         const ref = await addDoc(collection(db, "aiChats"), {
           messages: [{ role: "user", content: text, createdAt: Timestamp.now() }],
+          userId: user.uid,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
         });

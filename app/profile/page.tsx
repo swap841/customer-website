@@ -2,8 +2,7 @@
 
 import { toast } from "sonner";
 
-import { useEffect, useState, useRef } from "react";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import { getAuth, signOut, User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
@@ -22,8 +21,8 @@ import {
   Timestamp,
   where,
 } from "firebase/firestore";
-import { MoreVertical, AlertTriangle, PackageX, RefreshCw, Upload, Camera, Loader2, Send, MessageSquare } from "lucide-react";
-import { uploadToImgBB } from "@/lib/imageUpload";
+import { MoreVertical, AlertTriangle, PackageX, RefreshCw, Send, MessageSquare, Loader2 } from "lucide-react";
+
 
 // --- Type Definitions ---
 type OrderItem = {
@@ -77,15 +76,13 @@ export default function ProfilePage() {
   const [pastOrders, setPastOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const [queryModal, setQueryModal] = useState<{ order: Order; problemType: string } | null>(null);
   const [querySelectedItems, setQuerySelectedItems] = useState<string[]>([]);
-  const auth = getAuth();
   const router = useRouter();
+  const auth = getAuth();
 
   // --- Fetch Customer Data Function ---
   const fetchCustomerData = async (uid: string, displayName: string | null) => {
@@ -126,7 +123,7 @@ export default function ProfilePage() {
 
     // Listen to the orders subcollection for the current user
     const ordersRef = collection(db, "users", user.uid, "orders");
-    const q = query(ordersRef, orderBy("date", "desc"));
+    const q = query(ordersRef, orderBy("createdAt", "desc"));
 
     const unsubscribeOrders = onSnapshot(q, (snapshot) => {
       const orders: Order[] = [];
@@ -250,22 +247,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploadingPhoto(true);
-    try {
-      const url = await uploadToImgBB(file);
-      await setDoc(doc(db, "users", user.uid), { photoURL: url }, { merge: true });
-      setCustomerData((prev) => ({ ...prev, photoURL: url }));
-      toast.success("Profile photo updated!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to upload photo");
-    }
-    setUploadingPhoto(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
   const canShowMenu = (order: Order) => {
     const delivered = order.status.toLowerCase() === "delivered" || order.status.toLowerCase() === "completed";
     if (!delivered) return false;
@@ -286,6 +267,7 @@ export default function ProfilePage() {
       const docRef = await addDoc(collection(db, "contacts"), {
         name: customerData.name || user.displayName || "Customer",
         email: user.email || "",
+        phone: customerData.phone || "",
         subject: `Problem: ${problemType} - Order #${order.id.slice(-8).toUpperCase()}`,
         message: `[${problemType.toUpperCase()}] Order: ${order.id}\nItems: ${itemsToShow}`,
         orderId: order.id,
@@ -379,16 +361,22 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "contacts"), where("userId", "==", user.uid));
-    const unsub = onSnapshot(q, (snap) => {
-      const list: any[] = [];
-      snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
-      list.sort((a, b) => {
-        const aT = a.createdAt?.toDate?.()?.getTime() || a.createdAt?.seconds * 1000 || 0;
-        const bT = b.createdAt?.toDate?.()?.getTime() || b.createdAt?.seconds * 1000 || 0;
-        return aT - bT;
-      });
-      setContacts(list);
-    });
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list: any[] = [];
+        snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+        list.sort((a, b) => {
+          const aT = a.createdAt?.toDate?.()?.getTime() || a.createdAt?.seconds * 1000 || 0;
+          const bT = b.createdAt?.toDate?.()?.getTime() || b.createdAt?.seconds * 1000 || 0;
+          return aT - bT;
+        });
+        setContacts(list);
+      },
+      (err) => {
+        console.error("Error fetching contacts:", err);
+      }
+    );
     return () => unsub();
   }, [user]);
 
@@ -440,29 +428,11 @@ export default function ProfilePage() {
       {/* Left: Profile Edit */}
       <div className="w-full lg:w-1/3 bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl p-6 flex flex-col items-center border border-emerald-100/50">
         <div className="relative mb-4">
-          {customerData.photoURL || user.photoURL ? (
-            <Image
-              src={customerData.photoURL || user.photoURL || ""}
-              width={120}
-              height={120}
-              alt="Profile"
-              className="rounded-full ring-4 ring-emerald-200 shadow-lg object-cover w-[120px] h-[120px]"
-            />
-          ) : (
-            <div className="w-[120px] h-[120px] rounded-full ring-4 ring-emerald-200 shadow-lg bg-emerald-100 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
-            </div>
-          )}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingPhoto}
-            className="absolute -bottom-1 -right-1 w-9 h-9 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-md transition disabled:opacity-50 border-2 border-white"
-          >
-            {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-          </button>
-          <input type="file" accept="image/*" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
+          <div className="w-[120px] h-[120px] rounded-full ring-4 ring-emerald-200 shadow-lg bg-emerald-100 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+          </div>
         </div>
 
         {/* Full Name Input */}

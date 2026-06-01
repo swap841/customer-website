@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, FieldValue, isAdminReady } from "@/lib/firebaseAdmin";
+import { commit, isAdminReady } from "@/lib/firestoreAdmin";
+import type { WriteOp } from "@/lib/firestoreAdmin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,69 +13,53 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!isAdminReady() || !adminDb) {
+    if (!isAdminReady()) {
       return NextResponse.json(
         { success: false, error: "Server not configured" },
         { status: 500 }
       );
     }
 
-    const batch = adminDb.batch();
-    const orderRef = adminDb
-      .collection("users")
-      .doc(userId)
-      .collection("orders")
-      .doc();
+    const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     const fullOrder = {
       ...orderData,
-      id: orderRef.id,
-      payment: {
-        method: "cod",
-        status: "pending",
-      },
+      id: orderId,
+      payment: { method: "cod", status: "pending" },
       status: "Pending",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    batch.set(orderRef, fullOrder);
+    const writes: WriteOp[] = [
+      { operation: "set", collection: `users/${userId}/orders`, docId: orderId, data: fullOrder },
+      { operation: "create", collection: "payments", data: {
+        method: "cod", status: "pending", amount: orderData.totalAmount || 0,
+        currency: "INR", userId, orderId, createdAt: new Date().toISOString(),
+      }},
+    ];
 
     if (orderData.items && Array.isArray(orderData.items)) {
       for (const item of orderData.items) {
         if (item.productId) {
-          const productRef = adminDb.collection("products").doc(item.productId);
-          batch.update(productRef, {
-            stock: FieldValue.increment(-(item.quantity || 1)),
+          writes.push({
+            operation: "update", collection: "products", docId: item.productId, data: {},
+            transforms: [{ fieldPath: "stock", increment: -(item.quantity || 1) }],
           });
         }
       }
     }
 
-    const paymentRef = adminDb.collection("payments").doc();
-    batch.set(paymentRef, {
-      method: "cod",
-      status: "pending",
-      amount: orderData.totalAmount || 0,
-      currency: "INR",
-      userId,
-      orderId: orderRef.id,
-      createdAt: new Date().toISOString(),
-    });
-
     if (couponCode) {
-      const couponRef = adminDb.collection("coupons").doc(couponCode.toUpperCase());
-      batch.update(couponRef, {
-        usedCount: FieldValue.increment(1),
+      writes.push({
+        operation: "update", collection: "coupons", docId: couponCode.toUpperCase(), data: {},
+        transforms: [{ fieldPath: "usedCount", increment: 1 }],
       });
     }
 
-    await batch.commit();
+    await commit(writes);
 
-    return NextResponse.json({
-      success: true,
-      orderId: orderRef.id,
-    });
+    return NextResponse.json({ success: true, orderId });
   } catch (error: any) {
     console.error("Order create error:", error);
     return NextResponse.json(

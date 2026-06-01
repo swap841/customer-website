@@ -318,7 +318,7 @@ export default function CheckoutPageContent() {
               toast.dismiss(paymentToastId);
               toast.success("Payment successful! Order placed.");
               if (clearCart) clearCart();
-              router.push(`/order-success/${verifyData.orderId}`);
+              router.push(`/order-success?orderId=${verifyData.orderId}`);
             } else {
               toast.dismiss(paymentToastId);
               toast.error("Payment received but order saving failed.");
@@ -414,6 +414,9 @@ export default function CheckoutPageContent() {
 
       const orderData: Record<string, unknown> = {
         userId: user.uid,
+        userName: name || user.displayName || "",
+        userPhone: phone || "",
+        userEmail: user.email || "",
         items: orderItems,
         address: {
           name, phone,
@@ -458,7 +461,7 @@ export default function CheckoutPageContent() {
           }
           toast.success("Order placed successfully!");
           if (clearCart) clearCart();
-          router.push(`/order-success/${codData.orderId}`);
+          router.push(`/order-success?orderId=${codData.orderId}`);
         } else {
           toast.error("Failed to save order.");
         }
