@@ -24,6 +24,8 @@ import {
   Clock,
   User,
   MessageSquare,
+  ChevronLeft,
+  ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,6 +35,7 @@ interface Product {
   price: number;
   mrp?: number;
   imageUrl: string;
+  images?: string[];
   weight: number;
   unit: string;
   description: string;
@@ -77,6 +80,11 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [showAllImages, setShowAllImages] = useState(false);
+
+  const productImages = product?.images?.length ? product.images : product?.imageUrl ? [product.imageUrl] : [];
+  const THUMBNAIL_LIMIT = 4;
 
   const cartItem = cartItems.find((item) => item.id === productId);
   const quantity = cartItem?.quantity || 0;
@@ -95,6 +103,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
             price: data.price || 0,
             mrp: data.mrp || data.price,
             imageUrl: data.imageUrl || "",
+            images: data.images || [],
             weight: data.weight || 0,
             unit: data.unit || "g",
             description: data.description || "",
@@ -118,6 +127,7 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                 price: r.price || 0,
                 mrp: r.mrp || r.price,
                 imageUrl: r.imageUrl || "",
+                images: r.images || [],
                 weight: r.weight || 0,
                 unit: r.unit || "g",
                 description: r.description || "",
@@ -226,9 +236,61 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                 <Heart size={20} className={isWishlisted(productId) ? "fill-red-500 text-red-500" : "text-gray-500"} />
               </button>
 
+              {/* Main Image */}
               <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-gray-50/50 aspect-square">
-                <Image src={product.imageUrl} alt={product.name} fill priority className="object-contain p-4" />
+                {productImages.length > 0 ? (
+                  <Image src={productImages[selectedImageIndex]} alt={product.name} fill priority className="object-contain p-4 transition-opacity" />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-sm">No image</div>
+                )}
+
+                {/* Prev/Next arrows for multiple images */}
+                {productImages.length > 1 && (
+                  <>
+                    <button onClick={() => setSelectedImageIndex(i => (i - 1 + productImages.length) % productImages.length)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow hover:bg-white transition">
+                      <ChevronLeft className="w-4 h-4 text-gray-700" />
+                    </button>
+                    <button onClick={() => setSelectedImageIndex(i => (i + 1) % productImages.length)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow hover:bg-white transition">
+                      <ChevronRight className="w-4 h-4 text-gray-700" />
+                    </button>
+                  </>
+                )}
+
+                {/* Image counter badge */}
+                {productImages.length > 1 && (
+                  <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm">
+                    {selectedImageIndex + 1}/{productImages.length}
+                  </div>
+                )}
               </div>
+
+              {/* Thumbnail Strip */}
+              {productImages.length > 1 && (
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {productImages.slice(0, showAllImages ? productImages.length : THUMBNAIL_LIMIT).map((img, idx) => (
+                    <button key={idx} onClick={() => setSelectedImageIndex(idx)}
+                      className={`shrink-0 w-14 h-14 rounded-xl border-2 overflow-hidden transition-all ${
+                        idx === selectedImageIndex ? "border-emerald-500 ring-2 ring-emerald-500/20" : "border-gray-200 hover:border-gray-300"
+                      }`}>
+                      <Image src={img} alt="" width={56} height={56} className="object-cover w-full h-full" />
+                    </button>
+                  ))}
+                  {!showAllImages && productImages.length > THUMBNAIL_LIMIT && (
+                    <button onClick={() => setShowAllImages(true)}
+                      className="shrink-0 w-14 h-14 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-[10px] font-bold text-gray-500 hover:bg-gray-100 transition">
+                      +{productImages.length - THUMBNAIL_LIMIT}
+                    </button>
+                  )}
+                  {showAllImages && productImages.length > THUMBNAIL_LIMIT && (
+                    <button onClick={() => setShowAllImages(false)}
+                      className="shrink-0 w-14 h-14 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition">
+                      <ChevronUp className="w-4 h-4 text-gray-500" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col justify-between space-y-6">
