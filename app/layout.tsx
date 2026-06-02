@@ -52,10 +52,9 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <CartProvider>
-              <DynamicBranding />
               <StoreStatusGate>
                 <Navbar />
-                <main className="pt-16 md:pt-24 min-h-screen">{children}</main>
+                <main className="pt-16 md:pt-24 min-h-screen"><DynamicBranding>{children}</DynamicBranding></main>
                 <Footer />
                 <CartDrawer />
                 <ChatBot />

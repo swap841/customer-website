@@ -6,6 +6,8 @@
   --primary: #059669;
   --primary-light: #d1fae5;
   --primary-dark: #047857;
+  --accent: #0D9488;
+  --font-family: Inter, system-ui, -apple-system, sans-serif;
   --surface: #ffffff;
   --text-secondary: #64748b;
 }

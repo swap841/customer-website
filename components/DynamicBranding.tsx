@@ -1,43 +1,25 @@
 "use client";
+import React, { useEffect, useState } from "react";
+import { getAppConfig, AppConfig } from "@/lib/appConfig";
 
-import { useEffect } from "react";
-import { useAppConfig } from "@/hooks/useAppConfig";
-
-export default function DynamicBranding() {
-  const { data: config } = useAppConfig();
+export default function DynamicBranding({ children }: { children: React.ReactNode }) {
+  const [config, setConfig] = useState<AppConfig>({});
 
   useEffect(() => {
-    if (!config) return;
+    getAppConfig(true).then(setConfig).catch(() => {});
+  }, []);
 
-    const brand = config.branding;
-    const seo = config.seo;
-
-    document.title = seo?.metaTitle || brand?.storeName || "My Store";
-
-    if (seo?.metaDescription) {
-      let metaDesc = document.querySelector('meta[name="description"]');
-      if (!metaDesc) {
-        metaDesc = document.createElement("meta");
-        metaDesc.setAttribute("name", "description");
-        document.head.appendChild(metaDesc);
-      }
-      metaDesc.setAttribute("content", seo.metaDescription);
+  useEffect(() => {
+    if (config.business?.primaryColor) {
+      document.documentElement.style.setProperty("--primary", config.business.primaryColor);
     }
-
-    if (brand?.faviconUrl) {
-      let favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-      if (!favicon) {
-        favicon = document.createElement("link");
-        favicon.rel = "icon";
-        document.head.appendChild(favicon);
-      }
-      favicon.href = brand.faviconUrl;
+    if (config.business?.accentColor) {
+      document.documentElement.style.setProperty("--accent", config.business.accentColor);
     }
-
-    if (brand?.primaryColor) {
-      document.documentElement.style.setProperty("--primary", brand.primaryColor);
+    if (config.business?.font) {
+      document.documentElement.style.setProperty("--font-family", config.business.font);
     }
   }, [config]);
 
-  return null;
+  return <>{children}</>;
 }

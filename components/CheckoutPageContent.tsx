@@ -31,6 +31,7 @@ import {
 import { useContactInfo } from "@/hooks/useContactInfo";
 import { useAddresses } from "@/hooks/useAddresses";
 import AddressHistory from "@/components/AddressHistory";
+import { getAppConfig } from "@/lib/appConfig";
 
 const STORE_LAT_DEFAULT = 17.6868;
 const STORE_LNG_DEFAULT = 74.0066;
@@ -105,6 +106,7 @@ export default function CheckoutPageContent() {
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [isThirdPartyDelivery, setIsThirdPartyDelivery] = useState(false);
   const [preferredSlot, setPreferredSlot] = useState<TimeSlot>("morning");
+  const [paymentConfig, setPaymentConfig] = useState<any>(null);
   const { savedAddresses, saveAddress } = useAddresses();
 
   const savedAddressStrings = savedAddresses.map((a) => a.address);
@@ -131,6 +133,10 @@ export default function CheckoutPageContent() {
     });
     return () => unsubscribe();
   }, [auth, router]);
+
+  useEffect(() => {
+    getAppConfig(true).then(cfg => setPaymentConfig(cfg.payment || {})).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {
@@ -686,22 +692,43 @@ export default function CheckoutPageContent() {
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
         <h2 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2"><CreditCard className="w-5 h-5 text-emerald-600" /> Payment Method</h2>
         <div className="space-y-3">
-          {(["COD", "Online"] as const).map((method) => (
-            <div key={method}
-              className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${paymentMethod === method ? "border-emerald-500 bg-emerald-50 shadow-md" : "border-gray-300 hover:bg-gray-50"}`}
-              onClick={() => setPaymentMethod(method)}
+          {paymentConfig?.codEnabled !== false && (
+            <div
+              className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${paymentMethod === "COD" ? "border-emerald-500 bg-emerald-50 shadow-md" : "border-gray-300 hover:bg-gray-50"}`}
+              onClick={() => setPaymentMethod("COD")}
             >
               <label className="flex items-center cursor-pointer">
-                <input type="radio" className="h-5 w-5 text-emerald-600 accent-emerald-600" checked={paymentMethod === method} onChange={() => setPaymentMethod(method)} />
+                <input type="radio" className="h-5 w-5 text-emerald-600 accent-emerald-600" checked={paymentMethod === "COD"} onChange={() => setPaymentMethod("COD")} />
                 <div className="ml-3">
                   <span className="text-gray-800 font-medium flex items-center gap-2">
-                    {method === "COD" ? <><Banknote className="w-5 h-5 text-emerald-600" /> Cash on Delivery</> : <><CreditCard className="w-5 h-5 text-emerald-600" /> Pay Online (Razorpay)</>}
+                    <Banknote className="w-5 h-5 text-emerald-600" /> Cash on Delivery
                   </span>
-                  <p className="text-xs text-gray-500 mt-1">{method === "COD" ? "Pay when you receive your order" : "UPI, Cards, Netbanking"}</p>
+                  <p className="text-xs text-gray-500 mt-1">Pay when you receive your order</p>
                 </div>
               </label>
             </div>
-          ))}
+          )}
+          {paymentConfig?.razorpayEnabled && paymentConfig?.razorpayKeyId && (
+            <div
+              className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${paymentMethod === "Online" ? "border-emerald-500 bg-emerald-50 shadow-md" : "border-gray-300 hover:bg-gray-50"}`}
+              onClick={() => setPaymentMethod("Online")}
+            >
+              <label className="flex items-center cursor-pointer">
+                <input type="radio" className="h-5 w-5 text-emerald-600 accent-emerald-600" checked={paymentMethod === "Online"} onChange={() => setPaymentMethod("Online")} />
+                <div className="ml-3">
+                  <span className="text-gray-800 font-medium flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-emerald-600" /> Pay Online (Razorpay)
+                  </span>
+                  <p className="text-xs text-gray-500 mt-1">UPI, Cards, Netbanking</p>
+                </div>
+              </label>
+            </div>
+          )}
+          {paymentConfig && paymentConfig?.codEnabled === false && !(paymentConfig?.razorpayEnabled && paymentConfig?.razorpayKeyId) && (
+            <div className="rounded-xl border-2 border-gray-300 p-4 bg-gray-50">
+              <p className="text-gray-500 text-sm text-center">No payment methods available</p>
+            </div>
+          )}
         </div>
       </div>
 

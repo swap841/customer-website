@@ -1,20 +1,20 @@
 "use client";
-
-import type { ReactNode } from "react";
-import { useAppConfig } from "@/hooks/useAppConfig";
+import React, { useEffect, useState } from "react";
+import { getAppConfig, isFeatureEnabled, AppConfig } from "@/lib/appConfig";
 
 interface FeatureGateProps {
   feature: string;
-  fallback?: ReactNode;
-  children: ReactNode;
+  fallback?: React.ReactNode;
+  children: React.ReactNode;
 }
 
-export function FeatureGate({ feature, fallback = null, children }: FeatureGateProps) {
-  const { data: config } = useAppConfig();
+export default function FeatureGate({ feature, fallback = null, children }: FeatureGateProps) {
+  const [enabled, setEnabled] = useState(true);
 
-  const enabled = config?.features?.[feature] === true;
+  useEffect(() => {
+    getAppConfig().then((cfg) => setEnabled(isFeatureEnabled(cfg, feature))).catch(() => {});
+  }, [feature]);
 
   if (!enabled) return <>{fallback}</>;
-
   return <>{children}</>;
 }
