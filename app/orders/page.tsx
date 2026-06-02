@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { collection, query, getDocs, where } from "firebase/firestore";
+import { collection, query, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import {
   Package, Clock, Truck, CheckCircle2, AlertCircle, XCircle,
@@ -22,7 +22,7 @@ interface Order {
   status: string;
   totalAmount: number;
   items: OrderItem[];
-  createdAt: string;
+  createdAt: any;
   estimatedDeliveryDate?: string;
   payment?: { method: string };
   address?: { name: string };
@@ -69,10 +69,11 @@ export default function OrdersPage() {
     setLoading(true);
 
     try {
-      const q = query(collection(db, "orders"), where("userId", "==", user.uid));
+      const q = query(collection(db, "users", user.uid, "orders"));
       const snap = await getDocs(q);
       const items = snap.docs.map((d) => {
         const data = d.data();
+        const createdVal = data.createdAt || data.date;
         return {
           id: d.id,
           status: data.status || "Pending",
@@ -82,15 +83,15 @@ export default function OrdersPage() {
             quantity: i.quantity,
             price: i.price,
           })),
-          createdAt: data.createdAt,
+          createdAt: createdVal,
           estimatedDeliveryDate: data.estimatedDeliveryDate,
           payment: data.payment,
-          address: data.address,
+          address: data.deliveryAddress || data.address,
         } as Order;
       });
       items.sort((a, b) => {
-        const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        const da = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : a.createdAt?.seconds ? a.createdAt.seconds * 1000 : a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const db = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : b.createdAt?.seconds ? b.createdAt.seconds * 1000 : b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return db - da;
       });
       setOrders(items);
@@ -115,10 +116,18 @@ export default function OrdersPage() {
     );
   }
 
-  const formatDate = (d: string) => {
+  const formatDate = (d: any) => {
     if (!d) return "N/A";
     try {
-      return new Date(d).toLocaleDateString("en-IN", {
+      let dateObj: Date;
+      if (d?.toDate) {
+        dateObj = d.toDate();
+      } else if (d?.seconds) {
+        dateObj = new Date(d.seconds * 1000);
+      } else {
+        dateObj = new Date(d);
+      }
+      return dateObj.toLocaleDateString("en-IN", {
         day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
       });
     } catch {
