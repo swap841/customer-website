@@ -13,7 +13,6 @@ import {
   getDocs,
   onSnapshot,
   query,
-  orderBy,
   addDoc,
   setDoc,
   updateDoc,
@@ -122,10 +121,10 @@ export default function ProfilePage() {
     setLoading(true);
 
     // Listen to the orders subcollection for the current user
+    // No orderBy to avoid index requirement — sort client-side
     const ordersRef = collection(db, "users", user.uid, "orders");
-    const q = query(ordersRef, orderBy("createdAt", "desc"));
 
-    const unsubscribeOrders = onSnapshot(q, (snapshot) => {
+    const unsubscribeOrders = onSnapshot(ordersRef, (snapshot) => {
       const orders: Order[] = [];
 
       snapshot.forEach((doc) => {
@@ -182,6 +181,15 @@ export default function ProfilePage() {
         statusLower: o.status.toLowerCase()
       })));
 
+      // Sort by createdAt descending (client-side)
+      orders.sort((a, b) => {
+        const aVal: any = a.createdAt;
+        const bVal: any = b.createdAt;
+        const aT = aVal?.toDate ? aVal.toDate().getTime() : aVal?.seconds ? aVal.seconds * 1000 : aVal ? new Date(aVal).getTime() : 0;
+        const bT = bVal?.toDate ? bVal.toDate().getTime() : bVal?.seconds ? bVal.seconds * 1000 : bVal ? new Date(bVal).getTime() : 0;
+        return bT - aT;
+      });
+
       // Filter orders based on status (case-insensitive comparison)
       const current = orders.filter((order) => {
         const statusLower = order.status.toLowerCase();
@@ -193,17 +201,12 @@ export default function ProfilePage() {
         return PAST_STATUSES.includes(statusLower);
       });
 
-      // Debug: Log filtered results
-      console.log("Current orders count:", current.length);
-      console.log("Past orders count:", past.length);
-      console.log("Current statuses:", CURRENT_STATUSES);
-      console.log("Past statuses:", PAST_STATUSES);
-
       setCurrentOrders(current);
       setPastOrders(past);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders. Please try again.");
       setLoading(false);
     });
 
