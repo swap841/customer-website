@@ -61,7 +61,7 @@ type CustomerData = {
 
 // Define which statuses are considered "current" vs "past"
 // Using lowercase for comparison
-const CURRENT_STATUSES = ["pending", "dispatched", "processing", "confirmed", "shipped"];
+const CURRENT_STATUSES = ["pending", "packing", "assigned", "ready to dispatch", "out for delivery", "processing", "confirmed", "shipped", "dispatched"];
 const PAST_STATUSES = ["delivered", "completed", "fulfilled", "cancelled"];
 
 export default function ProfilePage() {
@@ -235,7 +235,7 @@ export default function ProfilePage() {
       await addDoc(ordersRef, {
         items: order.items,
         totalAmount: order.totalAmount,
-        status: "pending",
+        status: "Pending",
         date: Timestamp.now(),
         createdAt: Timestamp.now(),
         deliveryAddress: customerData.address || "",
