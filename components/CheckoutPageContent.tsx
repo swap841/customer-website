@@ -6,7 +6,7 @@ import { useCart } from "./CartContext";
 import { getAuth } from "firebase/auth";
 import { getAreaCode } from "../utils/getAreaCode";
 import { getDistanceKm } from "@/utils/distance";
-import { doc, setDoc, collection, writeBatch, increment } from "firebase/firestore";
+import { doc, setDoc, collection, writeBatch, increment, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { validateCoupon } from "../utils/coupon";
 import TimeSlotPicker, { type TimeSlot } from "./TimeSlotPicker";
@@ -213,13 +213,19 @@ export default function CheckoutPageContent() {
     if (!user) return null;
     try {
       const ordersRef = doc(collection(db, "users", user.uid, "orders"));
-      await setDoc(ordersRef, {
+      const orderId = ordersRef.id;
+      const orderPayload = {
         ...orderData,
-        id: ordersRef.id,
-        date: new Date().toISOString(),
-        timestamp: Date.now(),
-      });
-      return ordersRef.id;
+        id: orderId,
+        userId: user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      const batch = writeBatch(db);
+      batch.set(doc(db, "orders", orderId), orderPayload);
+      batch.set(doc(db, "users", user.uid, "orders", orderId), orderPayload);
+      await batch.commit();
+      return orderId;
     } catch (error) {
       console.error("Error saving order:", error);
       return null;
@@ -317,13 +323,22 @@ export default function CheckoutPageContent() {
               if (address && deliveryOption === "delivery") {
                 saveAddress(address, location?.lat, location?.lng);
               }
+              // Dual-write to ensure order exists in both locations
+              await saveOrderToFirestore(orderData);
               toast.dismiss(paymentToastId);
               toast.success("Payment successful! Order placed.");
               if (clearCart) clearCart();
               router.push(`/order-success?orderId=${verifyData.orderId}`);
             } else {
+              // Fallback: save order directly if server didn't
+              const fallbackId = await saveOrderToFirestore(orderData);
               toast.dismiss(paymentToastId);
-              toast.error("Payment received but order saving failed.");
+              if (fallbackId) {
+                toast.success("Order saved locally.");
+                router.push(`/order-success?orderId=${fallbackId}`);
+              } else {
+                toast.error("Payment received but order saving failed.");
+              }
             }
           } catch (error) {
             console.error("Error verifying payment:", error);
@@ -403,7 +418,7 @@ export default function CheckoutPageContent() {
       });
 
       const totalWeight = orderItems.reduce((sum, item) => sum + item.weight * item.quantity, 0);
-      const now = new Date().toISOString();
+      const now = serverTimestamp();
       const outOfCity = deliveryOption === "delivery" && distanceKm !== null && distanceKm > MAX_DIRECT_DELIVERY_KM;
 
       const nowDate = new Date();
@@ -414,6 +429,7 @@ export default function CheckoutPageContent() {
       }
       const estimatedDeliveryDate = new Date(nowDate.getTime() + (preparationHours + deliveryHours) * 60 * 60 * 1000);
 
+      const payMethod = paymentMethod === "Online" ? "razorpay" : "cod";
       const orderData: Record<string, unknown> = {
         userId: user.uid,
         userName: name || user.displayName || "",
@@ -434,7 +450,8 @@ export default function CheckoutPageContent() {
         couponDiscount,
         totalAmount: finalTotal,
         totalWeight,
-        payment: { method: "cod", status: "pending" },
+        payment: { method: payMethod, status: "pending" },
+        paymentMethod: payMethod,
         areaCode: deliveryOption === "delivery" ? areaCode : "PICKUP",
         outOfCity,
         estimatedDeliveryDate: estimatedDeliveryDate.toISOString(),
@@ -456,8 +473,9 @@ export default function CheckoutPageContent() {
           userId: user.uid,
           status: "Pending",
           payment: { method: "cod", status: "pending" },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          paymentMethod: "cod",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         };
         batch.set(doc(db, "orders", orderId), orderDataWithMeta);
         batch.set(doc(db, "users", user.uid, "orders", orderId), orderDataWithMeta);
