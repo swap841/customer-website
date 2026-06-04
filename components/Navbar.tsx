@@ -26,7 +26,10 @@ import {
   Info,
   ChevronDown,
   MessageCircle,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useContactInfo } from "@/hooks/useContactInfo";
 
 const auth = getAuth(app);
@@ -36,7 +39,11 @@ export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdown, setProfileDropdown] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
   const router = useRouter();
+
+  useEffect(() => setMounted(true), []);
   const pathname = usePathname();
 
   const { totalItems, subtotal, openCart } = useCart();
@@ -77,7 +84,7 @@ export default function Navbar() {
       : "text-zinc-600 hover:text-emerald-600";
 
   return (
-    <nav className="w-full bg-white/95 backdrop-blur-md border-b border-zinc-100 fixed top-0 left-0 z-50 shadow-sm">
+    <nav className="w-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-zinc-100 dark:border-zinc-800 fixed top-0 left-0 z-50 shadow-sm">
       {/* Premium Dynamic Support Bar */}
       <div className="hidden sm:block bg-emerald-600 text-white text-xs font-semibold py-1.5 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -122,7 +129,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${isActive(link.href)} hover:bg-emerald-50`}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${isActive(link.href)} hover:bg-emerald-50 dark:hover:bg-emerald-900/30`}
               >
                 {link.label}
               </Link>
@@ -131,6 +138,21 @@ export default function Navbar() {
 
           {/* ─── Right Section ─── */}
           <div className="flex items-center gap-2 sm:gap-3">
+
+            {/* Dark Mode Toggle */}
+            {mounted && (
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700"
+                aria-label="Toggle dark mode"
+              >
+                {theme === "dark" ? (
+                  <Sun className="w-5 h-5 text-amber-400" />
+                ) : (
+                  <Moon className="w-5 h-5 text-zinc-600" />
+                )}
+              </button>
+            )}
 
             {/* Cart Button */}
             <button
@@ -171,32 +193,32 @@ export default function Navbar() {
                 </button>
 
                 {/* Profile Dropdown */}
-                {profileDropdown && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-zinc-100 shadow-xl py-2 z-50">
-                    <div className="px-4 py-2 border-b border-zinc-100">
-                      <p className="text-sm font-bold text-zinc-800 truncate">
-                        {user.displayName}
-                      </p>
-                      <p className="text-xs text-zinc-400 truncate">
-                        {user.email}
-                      </p>
+                  {profileDropdown && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-xl py-2 z-50">
+                      <div className="px-4 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                        <p className="text-sm font-bold text-zinc-800 dark:text-zinc-100 truncate">
+                          {user.displayName}
+                        </p>
+                        <p className="text-xs text-zinc-400 truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                      <Link
+                        href="/profile"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <UserIcon className="w-4 h-4 text-zinc-400" />
+                        My Profile
+                      </Link>
+                      <button
+                        onClick={logoutUser}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                      </button>
                     </div>
-                    <Link
-                      href="/profile"
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
-                    >
-                      <UserIcon className="w-4 h-4 text-zinc-400" />
-                      My Profile
-                    </Link>
-                    <button
-                      onClick={logoutUser}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign Out
-                    </button>
-                  </div>
-                )}
+                  )}
               </div>
             ) : (
               <Link
@@ -225,13 +247,13 @@ export default function Navbar() {
 
       {/* ─── Mobile Menu ─── */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-zinc-100 shadow-lg">
+        <div className="md:hidden bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 shadow-lg">
           <div className="px-4 py-3 space-y-1">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isActive(link.href)} hover:bg-emerald-50`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isActive(link.href)} hover:bg-emerald-50 dark:hover:bg-emerald-900/30`}
               >
                 <link.icon className="w-4 h-4" />
                 {link.label}

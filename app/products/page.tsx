@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { collection, getDocs, query, where, limit, startAfter, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import ProductCard from "@/components/ProductCard";
-import { Search, Loader2, ChevronDown } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { VoiceSearch } from "@/components/VoiceSearch";
 import type { Product } from "@/shared/models";
 
@@ -30,6 +30,7 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -121,6 +122,22 @@ export default function ProductsPage() {
   const handleLoadMore = useCallback(() => {
     loadProducts(false);
   }, [lastDoc]);
+
+  // Infinite scroll via IntersectionObserver
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, handleLoadMore]);
 
   const filteredProducts = useMemo(() => {
     return allProducts.filter((p) => {
@@ -245,22 +262,12 @@ export default function ProductsPage() {
               ))}
             </div>
 
-            {hasMore && (
+            {loadingMore && (
               <div className="text-center pt-6 pb-4">
-                <button
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition disabled:opacity-50 shadow-sm"
-                >
-                  {loadingMore ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                  {loadingMore ? "Loading..." : "Load More"}
-                </button>
+                <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mx-auto" />
               </div>
             )}
+            {hasMore && <div ref={sentinelRef} className="h-px w-full" />}
           </>
         )}
       </div>
