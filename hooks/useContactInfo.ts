@@ -22,6 +22,7 @@ const DEFAULT_CONTACT_INFO: ContactInfo = {
   heroTitle: "Fresh groceries, delivered in 24 hours",
   heroSubtitle: "Farm-fresh produce, dairy, snacks and daily essentials – straight to your door.",
   aboutText: "",
+  socialMedia: {},
 };
 
 export function useContactInfo() {

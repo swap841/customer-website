@@ -57,6 +57,10 @@ export interface ContactInfo {
   termsAndConditions?: string;
   ownerFcmToken?: string;
   ownerPhone?: string;
+  socialMedia?: {
+    facebook?: string;
+    instagram?: string;
+  };
 }
 
 export interface Order {

@@ -8,7 +8,6 @@ import {
   MapPin,
   Facebook,
   Instagram,
-  Twitter,
 } from "lucide-react";
 
 const footerLinks = {
@@ -90,15 +89,16 @@ export default function Footer() {
 
             {/* Social Links */}
             <div className="flex items-center gap-3 mt-4">
-              <a href="#" className="w-8 h-8 bg-zinc-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Facebook">
-                <Facebook className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-8 h-8 bg-zinc-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Instagram">
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-8 h-8 bg-zinc-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Twitter">
-                <Twitter className="w-4 h-4" />
-              </a>
+              {contactInfo.socialMedia?.facebook && (
+                <a href={contactInfo.socialMedia.facebook} target="_blank" className="w-8 h-8 bg-zinc-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Facebook">
+                  <Facebook className="w-4 h-4" />
+                </a>
+              )}
+              {contactInfo.socialMedia?.instagram && (
+                <a href={contactInfo.socialMedia.instagram} target="_blank" className="w-8 h-8 bg-zinc-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Instagram">
+                  <Instagram className="w-4 h-4" />
+                </a>
+              )}
             </div>
           </div>
 
