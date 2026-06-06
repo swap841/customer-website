@@ -363,8 +363,10 @@ export default function OrderTrackingPage() {
                 if (!user || reviewLoading) return;
                 setReviewLoading(true);
                 try {
-                  await addDoc(collection(db, "users", user.uid, "reviews"), {
+                  await addDoc(collection(db, "reviews"), {
                     productId: "order",
+                    orderId: orderId,
+                    userId: user.uid,
                     rating: reviewRating,
                     comment: reviewComment,
                     createdAt: new Date().toISOString(),

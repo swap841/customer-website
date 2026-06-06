@@ -129,7 +129,7 @@ const CartDrawer: React.FC = () => {
                   <div className="flex justify-between">
                     <span>Delivery charge</span>
                     {deliveryCharge === 0 ? (
-                      <span className="flex gap-2"><span className="line-through text-gray-400">₹25</span><span className="text-blue-600 font-semibold">FREE</span></span>
+                      <span className="flex gap-2"><span className="line-through text-gray-400">₹{deliveryCharge === 0 ? 25 : deliveryCharge}</span><span className="text-blue-600 font-semibold">FREE</span></span>
                     ) : <span>₹{deliveryCharge}</span>}
                   </div>
                   <div className="flex justify-between"><span>Tax</span><span>₹{taxAmount}</span></div>

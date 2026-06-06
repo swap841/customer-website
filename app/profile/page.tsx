@@ -234,6 +234,15 @@ export default function ProfilePage() {
   const handleReorder = async (order: Order) => {
     if (!user) return;
     try {
+      // Decrement stock for each item
+      for (const item of order.items) {
+        const productRef = doc(db, "products", item.id);
+        const productSnap = await getDoc(productRef);
+        if (productSnap.exists()) {
+          const currentStock = productSnap.data().stock || 0;
+          await setDoc(productRef, { stock: Math.max(0, currentStock - item.quantity) }, { merge: true });
+        }
+      }
       const ordersRef = collection(db, "users", user.uid, "orders");
       await addDoc(ordersRef, {
         items: order.items,
@@ -243,6 +252,7 @@ export default function ProfilePage() {
         createdAt: Timestamp.now(),
         deliveryAddress: customerData.address || "",
         phone: customerData.phone || "",
+        payment: { method: "cod", status: "pending" },
       });
       toast.success("Order placed again!");
     } catch (err) {

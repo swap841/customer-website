@@ -10,6 +10,8 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth } from "@/firebaseConfig";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebaseClient";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -56,6 +58,14 @@ export default function AuthPage() {
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(cred.user, { displayName: name });
+      // Create Firestore user document
+      await setDoc(doc(db, "users", cred.user.uid), {
+        name,
+        email,
+        phone: "",
+        address: "",
+        createdAt: serverTimestamp(),
+      });
       toast.success("Account created successfully");
       router.push("/");
     } catch (err: unknown) {

@@ -300,7 +300,7 @@ export default function CheckoutPageContent() {
         key: razorpayKeyId,
         amount: Math.round(finalTotal * 100),
         currency: "INR",
-        name: "My Store Grocery Logistics",
+        name: contactInfo.storeName || "My Store Grocery",
         description: `Order of ${cartItems.length} item(s)`,
         order_id: data.orderId,
         handler: async (response: RazorpayResponse) => {

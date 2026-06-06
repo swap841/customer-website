@@ -95,7 +95,26 @@ export default function ProductsPage() {
         );
       }
 
-      const snap = await getDocs(q);
+      let snap;
+      try {
+        snap = await getDocs(q);
+      } catch {
+        // Fallback without orderBy if composite index is missing
+        let fallbackQ = query(
+          collection(db, "products"),
+          where("active", "==", true),
+          limit(PAGE_SIZE + 1)
+        );
+        if (!isInitial && lastDoc) {
+          fallbackQ = query(
+            collection(db, "products"),
+            where("active", "==", true),
+            startAfter(lastDoc),
+            limit(PAGE_SIZE + 1)
+          );
+        }
+        snap = await getDocs(fallbackQ);
+      }
       const docs = snap.docs;
       const hasMoreData = docs.length > PAGE_SIZE;
       const items = docs.slice(0, PAGE_SIZE).map((d) => ({

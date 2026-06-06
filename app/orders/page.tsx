@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { collection, query, getDocs } from "firebase/firestore";
+import { collection, query, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import {
   Package, Clock, Truck, CheckCircle2, AlertCircle, XCircle,
@@ -61,16 +61,10 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (!user) return;
-    loadOrders();
-  }, [user]);
-
-  async function loadOrders() {
-    if (!user) return;
     setLoading(true);
 
-    try {
-      const q = query(collection(db, "users", user.uid, "orders"));
-      const snap = await getDocs(q);
+    const q = query(collection(db, "users", user.uid, "orders"));
+    const unsubscribe = onSnapshot(q, (snap) => {
       const items = snap.docs.map((d) => {
         const data = d.data();
         const createdVal = data.createdAt || data.date;
@@ -96,12 +90,13 @@ export default function OrdersPage() {
       });
       setOrders(items);
       setTotalCount(items.length);
-    } catch (err) {
-      console.error("Error loading orders:", err);
-    } finally {
       setLoading(false);
-    }
-  }
+    }, () => {
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   if (authChecking || !user) {
     return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocs, query, where, documentId, collection } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useWishlist } from "@/hooks/useWishlist";
@@ -32,13 +32,16 @@ export default function WishlistPage() {
         return;
       }
       const results: Product[] = [];
-      for (const id of wishlistIds) {
+      // Batch fetch using 'in' query (max 10 per batch)
+      for (let i = 0; i < wishlistIds.length; i += 10) {
+        const batch = wishlistIds.slice(i, i + 10);
         try {
-          const snap = await getDoc(doc(db, "products", id));
-          if (snap.exists()) {
-            results.push({ id: snap.id, ...snap.data() } as Product);
-          }
-        } catch { /* skip */ }
+          const q = query(collection(db, "products"), where(documentId(), "in", batch));
+          const snap = await getDocs(q);
+          snap.forEach((d) => {
+            results.push({ id: d.id, ...d.data() } as Product);
+          });
+        } catch { /* skip batch */ }
       }
       setProducts(results);
       setLoading(false);

@@ -48,7 +48,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body className="font-sans antialiased bg-gray-50">
+      <body className="font-sans antialiased bg-gray-50 dark:bg-zinc-950 dark:text-white">
         <ThemeProvider>
           <QueryProvider>
             <CartProvider>

@@ -18,6 +18,7 @@ import {
   getDocs,
   query,
   serverTimestamp,
+  getDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -122,6 +123,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const [taxPercentage, setTaxPercentage] = useState(5);
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(100);
+  const [deliveryChargeConfig, setDeliveryCharge] = useState(25);
 
   const [user, setUser] = useState<{ uid: string } | null>(null);
 
@@ -158,6 +160,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
     });
     return () => unsubscribe();
+  }, []);
+
+  // Sync delivery charge, tax, and free delivery threshold from Firestore config
+  useEffect(() => {
+    async function syncConfig() {
+      try {
+        const snap = await getDoc(doc(db, "config", "appConfig"));
+        if (snap.exists()) {
+          const cfg = snap.data() as any;
+          if (cfg.store?.deliveryCharge != null) setDeliveryCharge(cfg.store.deliveryCharge);
+          if (cfg.store?.taxPercent != null) setTaxPercentage(cfg.store.taxPercent);
+          if (cfg.store?.freeDeliveryAbove != null) setFreeDeliveryThreshold(cfg.store.freeDeliveryAbove);
+        }
+      } catch { /* optional */ }
+    }
+    syncConfig();
   }, []);
 
   // Listen to Firestore cart when user is logged in
@@ -312,7 +330,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const deliveryCharge = subtotal >= freeDeliveryThreshold ? 0 : 25;
+  const deliveryCharge = subtotal >= freeDeliveryThreshold ? 0 : deliveryChargeConfig;
   const taxAmount = Math.round((subtotal * taxPercentage) / 100);
   const grandTotal = Math.max(subtotal + deliveryCharge + taxAmount - couponDiscount, 0);
 
