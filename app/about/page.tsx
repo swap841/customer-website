@@ -1,69 +1,104 @@
-// app/about/page.tsx
-
 "use client";
 
-import { Sparkles, CheckCircle2, TrendingUp, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebaseClient";
 import { useContactInfo } from "@/hooks/useContactInfo";
+import { Building2, Target, Eye, Award, Calendar, Users, Sparkles } from "lucide-react";
 
 export default function AboutPage() {
   const { contactInfo } = useContactInfo();
+  const [aboutUs, setAboutUs] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const snap = await getDoc(doc(db, "appConfig", "settings"));
+        if (snap.exists() && snap.data().aboutUs) {
+          setAboutUs(snap.data().aboutUs);
+        }
+      } catch {}
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  const storeName = contactInfo.storeName || "MyStore";
+  const story = aboutUs?.story || contactInfo.aboutText || `Founded in 2026, ${storeName} started with a simple idea: cut out the middleman and deliver farm-fresh groceries straight to your kitchen.`;
+  const mission = aboutUs?.mission || "To make grocery shopping convenient, affordable, and reliable for every household.";
+  const vision = aboutUs?.vision || "To become the most trusted local grocery delivery service in your neighborhood.";
+  const foundingDate = aboutUs?.foundingDate || "2020-01-01";
+  const achievements: string[] = aboutUs?.achievements || [];
+  const teamSize = aboutUs?.teamSize;
+
+  if (loading) return <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 animate-pulse p-8" />;
 
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-12">
-        {/* Hero */}
-        <div className="text-center space-y-4">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="text-center space-y-2">
           <h1 className="text-4xl font-black bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
-            🌱 About {contactInfo.storeName}
+            About {storeName}
           </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-semibold max-w-xl mx-auto">
-            {contactInfo.tagline || "Delivering farm-fresh organic produce, daily essentials, and household products straight to your doorstep."}
+          <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+            Your trusted partner since {foundingDate.split("-")[0] || "2020"}
           </p>
         </div>
 
-        {/* Story Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-500 shadow-xl p-8 md:p-12 text-white">
-          <div className="absolute inset-0 bg-black/5 pointer-events-none" />
-          <div className="relative space-y-4 max-w-xl">
-            <span className="text-xs font-black uppercase bg-white/20 px-2.5 py-1 rounded-full tracking-wider">Our Story</span>
-            <h2 className="text-2xl font-black md:text-3xl">Bridging the Gap between Farmers & Families</h2>
-            <p className="text-emerald-50 text-sm leading-relaxed">
-              {contactInfo.aboutText || `Founded in 2026, ${contactInfo.storeName} started with a simple, disruptive idea: cut out the middleman and logistics delays. We select produce directly from local farm collectives, package them in local dispatch centers under strict food safety checks, and deliver them to your kitchen.`}
-            </p>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/50 dark:border-zinc-800 p-6 md:p-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Our Story</h2>
+          </div>
+          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">{story}</p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/50 dark:border-zinc-800 p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Target className="w-5 h-5 text-emerald-600" />
+              <h3 className="font-bold text-zinc-900 dark:text-zinc-100">Our Mission</h3>
+            </div>
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{mission}</p>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/50 dark:border-zinc-800 p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Eye className="w-5 h-5 text-emerald-600" />
+              <h3 className="font-bold text-zinc-900 dark:text-zinc-100">Our Vision</h3>
+            </div>
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{vision}</p>
           </div>
         </div>
 
-        {/* Pillars */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 p-6 rounded-2xl space-y-3 shadow-xs">
-            <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500">
-              <Sparkles className="w-5 h-5" />
+        {achievements.length > 0 && (
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/50 dark:border-zinc-800 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Award className="w-5 h-5 text-emerald-600" />
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Achievements</h2>
             </div>
-            <h3 className="font-extrabold text-zinc-900 dark:text-white">Farm Fresh</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-semibold">
-              Harvested at dawn and delivered to your doorstep within hours. Never cold-stored for weeks.
-            </p>
+            <ul className="space-y-2">
+              {achievements.map((a, i) => (
+                <li key={i} className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 text-sm">
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                  {a}
+                </li>
+              ))}
+            </ul>
           </div>
+        )}
 
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 p-6 rounded-2xl space-y-3 shadow-xs">
-            <div className="w-10 h-10 bg-teal-500/10 rounded-xl flex items-center justify-center text-teal-500">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <h3 className="font-extrabold text-zinc-900 dark:text-white">Strict Quality</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-semibold">
-              Multi-point quality checks ensure only organic, clean, and prime groceries enter your basket.
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 p-6 rounded-2xl space-y-3 shadow-xs">
-            <div className="w-10 h-10 bg-violet-500/10 rounded-xl flex items-center justify-center text-violet-500">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <h3 className="font-extrabold text-zinc-900 dark:text-white">Fair Pricing</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-semibold">
-              By working directly with growers, we guarantee better earnings for farmers and lower bills for you.
-            </p>
-          </div>
+        <div className="flex items-center justify-center gap-4 text-zinc-400 text-sm py-4">
+          <span className="flex items-center gap-1">
+            <Calendar className="w-4 h-4" />
+            Established {new Date(foundingDate).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
+          </span>
+          {teamSize && (
+            <span className="flex items-center gap-1">
+              <Users className="w-4 h-4" />
+              Team of {teamSize}
+            </span>
+          )}
         </div>
       </div>
     </div>
