@@ -28,6 +28,7 @@ export interface Banner {
 export interface Category {
   id: string;
   name: string;
+  displayName?: string;
   slug?: string;
   active?: boolean;
   order?: number;

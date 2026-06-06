@@ -139,7 +139,7 @@ export default function Home() {
               ))
             ) : (
               catList.map((category) => {
-                const displayName = category.name.charAt(0).toUpperCase() + category.name.slice(1);
+                const displayName = category.displayName || (category.name.charAt(0).toUpperCase() + category.name.slice(1));
                 return (
                   <Link
                     key={category.id}
