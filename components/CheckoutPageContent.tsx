@@ -107,9 +107,11 @@ export default function CheckoutPageContent() {
   const [isThirdPartyDelivery, setIsThirdPartyDelivery] = useState(false);
   const [preferredSlot, setPreferredSlot] = useState<TimeSlot>("morning");
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
-  const { savedAddresses, saveAddress } = useAddresses();
+  const { savedAddresses, saveAddress, deleteAddress } = useAddresses();
 
   const savedAddressStrings = savedAddresses.map((a) => a.address);
+
+  const [selectedAddressLabel, setSelectedAddressLabel] = useState<string>("");
 
   const effectiveDeliveryFee = deliveryOption === "delivery" ? (subtotal >= FREE_DELIVERY_ABOVE ? 0 : deliveryCharge) : 0;
   const taxAmount = Math.round((subtotal * TAX_PERCENT) / 100);
@@ -327,7 +329,7 @@ export default function CheckoutPageContent() {
 
             if (verifyData.orderId) {
               if (address && deliveryOption === "delivery") {
-                saveAddress(address, location?.lat, location?.lng);
+                saveAddress(address, location?.lat, location?.lng, selectedAddressLabel || undefined);
               }
               // Dual-write to ensure order exists in both locations
               await saveOrderToFirestore(orderData);
@@ -500,7 +502,7 @@ export default function CheckoutPageContent() {
 
         try {
           await batch.commit();
-          if (address && deliveryOption === "delivery") saveAddress(address, location?.lat, location?.lng);
+          if (address && deliveryOption === "delivery") saveAddress(address, location?.lat, location?.lng, selectedAddressLabel || undefined);
           toast.success("Order placed successfully!");
           if (clearCart) clearCart();
           router.push(`/order-success?orderId=${orderId}`);
@@ -595,48 +597,67 @@ export default function CheckoutPageContent() {
       )}
 
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
-        <h2 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2"><User className="w-5 h-5 text-emerald-600" /> Customer Information</h2>
-        <div className="space-y-4">
-          <div className="rounded-xl border border-gray-300 p-3 bg-gray-50 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 transition-all">
-            <label className="block text-sm font-medium text-gray-700 mb-1"><User className="w-3.5 h-3.5 inline mr-1" /> Full Name *</label>
-            <input className="w-full bg-transparent outline-none text-gray-800" placeholder="Enter your full name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <h2 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2"><User className="w-5 h-5 text-emerald-600" /> Your Details</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="rounded-xl border border-gray-200 p-3 bg-gray-50/50 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-50 transition-all">
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Full Name</label>
+            <input className="w-full bg-transparent outline-none text-gray-800 text-sm" placeholder="Enter your full name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
-          <div className="rounded-xl border border-gray-300 p-3 bg-gray-50 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 transition-all">
-            <label className="block text-sm font-medium text-gray-700 mb-1"><Phone className="w-3.5 h-3.5 inline mr-1" /> Phone Number *</label>
-            <input className="w-full bg-transparent outline-none text-gray-800" placeholder="Enter your phone number" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" required />
+          <div className="rounded-xl border border-gray-200 p-3 bg-gray-50/50 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-50 transition-all">
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Phone Number</label>
+            <input className="w-full bg-transparent outline-none text-gray-800 text-sm" placeholder="Enter your phone number" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" required />
           </div>
-          {deliveryOption === "delivery" && (
+        </div>
+        {deliveryOption === "delivery" && (
             <>
-              <div className="rounded-xl border border-gray-300 p-3 bg-gray-50 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 transition-all">
-                <label className="block text-sm font-medium text-gray-700 mb-1"><MapPin className="w-3.5 h-3.5 inline mr-1" /> Delivery Address *</label>
-                <textarea className="w-full bg-transparent outline-none text-gray-800 resize-none" placeholder="Enter complete delivery address" value={address} onChange={(e) => setAddress(e.target.value)} rows={3} required />
-              </div>
-              <AddressHistory
-                onSelect={(addr) => setAddress(addr)}
-                savedAddresses={savedAddressStrings}
-              />
-              <div className="rounded-xl border border-gray-300 p-3 bg-gray-50">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-sm font-medium text-gray-700"><Navigation className="w-3.5 h-3.5 inline mr-1" /> Delivery Location</label>
-                  <button type="button" onClick={getDeliveryLocation} disabled={isLoading}
-                    className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1">
-                    {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
-                    {isLoading ? "Getting..." : "Get Location"}
-                  </button>
-                </div>
-                {isLoading ? (
-                  <div className="flex items-center space-x-2"><Loader2 className="w-4 h-4 animate-spin text-gray-600" /><span className="text-gray-600">Detecting location...</span></div>
-                ) : location ? (
-                  <div className="text-gray-800">
-                    <p className="text-sm flex items-center gap-1">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Delivery location detected
-                      {distanceKm !== null && <span className="text-xs text-gray-500 ml-1">({distanceKm} km from store)</span>}
-                    </p>
+              <div className="rounded-2xl border border-gray-200 p-4 bg-white focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-50 transition-all">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Delivery Address *</label>
+                <textarea
+                  className="w-full bg-transparent outline-none text-gray-800 resize-none text-sm leading-relaxed"
+                  placeholder="Enter your complete delivery address with landmarks..."
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  rows={3}
+                  required
+                />
+                {location && (
+                  <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
+                    <MapPin className="w-3 h-3 text-emerald-500" />
+                    <span className="text-[11px] text-gray-400 font-medium">
+                      {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                      {distanceKm !== null && ` \u00B7 ${distanceKm} km from store`}
+                    </span>
                   </div>
-                ) : (
-                  <div><p className="text-gray-500 text-sm">Location not detected yet</p></div>
                 )}
               </div>
+
+              <AddressHistory
+                onSelect={(addr, lat, lng, label) => {
+                  setAddress(addr);
+                  if (label) setSelectedAddressLabel(label);
+                  if (lat && lng) {
+                    setLocation({ lat, lng });
+                    setAreaCode(getAreaCode(lat, lng));
+                    checkDistance(lat, lng);
+                  }
+                }}
+                onDelete={deleteAddress}
+                savedAddresses={savedAddresses}
+                selectedAddress={address}
+              />
+
+              <button
+                type="button"
+                onClick={getDeliveryLocation}
+                disabled={isLoading}
+                className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-3.5 flex items-center justify-center gap-2 text-sm font-semibold text-gray-500 hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-600 transition-all"
+              >
+                {isLoading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Detecting...</>
+                ) : (
+                  <><Navigation className="w-4 h-4" /> Use my current location</>
+                )}
+              </button>
             </>
           )}
           {deliveryOption === "pickup" && (
@@ -651,7 +672,6 @@ export default function CheckoutPageContent() {
               </div>
             </div>
           )}
-        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
