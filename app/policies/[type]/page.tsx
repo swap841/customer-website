@@ -62,8 +62,12 @@ export default function PolicyPage() {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            <div className="space-y-4 animate-pulse">
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4" />
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full" />
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-5/6" />
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-2/3" />
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-4/5" />
             </div>
           ) : (
             <div className="prose prose-zinc dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">

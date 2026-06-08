@@ -251,9 +251,9 @@ const patterns: Pattern[] = [
     partials: ["how much delivery", "delivery cost", "shipping fee", "will it deliver"],
     response: "Here's what you need to know about delivery:",
     steps: [
-      "We deliver within a **15 km radius** from our store",
-      "**Free delivery** on orders above ₹299",
-      "Standard delivery charge: **₹29**",
+      "We deliver within a configurable radius from our store",
+      "**Free delivery** on orders above the minimum threshold (shown at checkout)",
+      "Standard delivery charge is shown during checkout",
       "Delivery slots are shown during checkout",
       "Estimated delivery: **within 24 hours**",
     ],
@@ -263,8 +263,8 @@ const patterns: Pattern[] = [
     partials: ["minimum for delivery", "what is the minimum"],
     response: "Our minimum order details:",
     steps: [
-      "**Minimum order value**: ₹49",
-      "**Free delivery**: Orders above ₹299",
+      "**Minimum order value** is shown during checkout",
+      "**Free delivery**: Orders above the free delivery threshold",
       "Add more items to your cart to reach the minimum!",
     ],
   },

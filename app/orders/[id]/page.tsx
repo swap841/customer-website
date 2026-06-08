@@ -206,9 +206,13 @@ export default function OrderTrackingPage() {
                 const confirmed = window.confirm("Are you sure you want to cancel this order? Your items will be restocked and a refund will be initiated if paid online.");
                 if (!confirmed) return;
                 try {
+                  const token = await getAuth().currentUser?.getIdToken();
                   const res = await fetch("/api/orders/cancel", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                      "Content-Type": "application/json",
+                      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
                     body: JSON.stringify({ orderId, userId: user?.uid }),
                   });
                   const data = await res.json();
@@ -413,13 +417,21 @@ export default function OrderTrackingPage() {
                 if (!user || returnLoading || !returnReason.trim()) return;
                 setReturnLoading(true);
                 try {
-                  await addDoc(collection(db, "tickets"), {
+                  const docRef = await addDoc(collection(db, "contacts"), {
                     type: "return_request",
+                    name: user.displayName || user.email || "Customer",
+                    email: user.email || "",
+                    subject: `Return Request - Order #${orderId?.slice(0, 8)}`,
+                    message: returnReason,
                     userId: user.uid,
                     orderId,
-                    message: returnReason,
                     status: "open",
+                    read: false,
+                    replies: [],
                     createdAt: new Date().toISOString(),
+                  });
+                  await updateDoc(doc(db, "users", user.uid, "orders", orderId!), {
+                    ticketContactId: docRef.id,
                   });
                   setReturnSubmitted(true);
                   toast.success("Return request submitted! We'll contact you shortly.");

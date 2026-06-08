@@ -55,6 +55,7 @@ interface CartContextType {
   totalItems: number;
   subtotal: number;
   deliveryCharge: number;
+  deliveryChargeConfig: number;
   taxAmount: number;
   grandTotal: number;
 
@@ -166,7 +167,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     async function syncConfig() {
       try {
-        const snap = await getDoc(doc(db, "config", "appConfig"));
+        const snap = await getDoc(doc(db, "appConfig", "settings"));
         if (snap.exists()) {
           const cfg = snap.data() as any;
           if (cfg.store?.deliveryCharge != null) setDeliveryCharge(cfg.store.deliveryCharge);
@@ -371,6 +372,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         totalItems,
         subtotal,
         deliveryCharge,
+        deliveryChargeConfig,
         taxAmount,
         grandTotal,
         isCartOpen,

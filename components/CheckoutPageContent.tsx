@@ -66,7 +66,7 @@ interface RazorpayInstance {
   on: (event: string, callback: () => void) => void;
 }
 
-const EXPRESS_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://grocery-server-10ct.onrender.com';
+const EXPRESS_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://grocery-server-u2qq.onrender.com';
 
 export default function CheckoutPageContent() {
   const router = useRouter();
@@ -77,7 +77,7 @@ export default function CheckoutPageContent() {
   const TAX_PERCENT = contactInfo.taxPercentage || 5;
   const DELIVERY_FEE_PER_KM = contactInfo.deliveryFeePerKm || 5;
   const FREE_DELIVERY_ABOVE = contactInfo.freeDeliveryAbove || 100;
-  const THIRD_PARTY_DELIVERY_CHARGE = 25;
+  const THIRD_PARTY_DELIVERY_CHARGE = contactInfo.thirdPartyDeliveryCharge || 25;
   const STORE_LAT = contactInfo.warehouseLat || STORE_LAT_DEFAULT;
   const STORE_LNG = contactInfo.warehouseLng || STORE_LNG_DEFAULT;
 

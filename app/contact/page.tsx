@@ -148,7 +148,7 @@ export default function ContactPage() {
               <div className="space-y-1">
                 <h3 className="text-xs font-black text-zinc-400 uppercase tracking-wider">Call Helpdesk</h3>
                 <p className="text-sm font-bold text-zinc-850 dark:text-zinc-200 hover:text-emerald-600 transition-colors">{contactInfo.phone}</p>
-                <span className="text-[10px] text-zinc-400 font-medium block">9:00 AM - 9:00 PM</span>
+                <span className="text-[10px] text-zinc-400 font-medium block">{contactInfo.workingHours || "9:00 AM - 9:00 PM"}</span>
               </div>
             </a>
 
@@ -162,7 +162,7 @@ export default function ContactPage() {
               <div className="space-y-1">
                 <h3 className="text-xs font-black text-zinc-400 uppercase tracking-wider">Email Us</h3>
                 <p className="text-sm font-bold text-zinc-850 dark:text-zinc-200 hover:text-teal-600 transition-colors">{contactInfo.email}</p>
-                <span className="text-[10px] text-zinc-400 font-medium block">Average response time: 4 hours</span>
+                <span className="text-[10px] text-zinc-400 font-medium block">{contactInfo.responseTime || "Average response time: 4 hours"}</span>
               </div>
             </a>
 

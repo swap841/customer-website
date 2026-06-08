@@ -49,15 +49,23 @@ export interface AppConfig {
     primary?: string;
     priority?: string[];
   };
+  seo?: {
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string[];
+  };
+  ai?: {
+    geminiApiKey?: string;
+  };
 }
 
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "https://grocery-server-10ct.onrender.com";
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "https://grocery-server-u2qq.onrender.com";
 let cachedConfig: AppConfig | null = null;
 
 export async function getAppConfig(forceRefresh = false): Promise<AppConfig> {
   if (!forceRefresh && cachedConfig) return cachedConfig;
   try {
-    const snap = await getDoc(doc(db, "config", "appConfig"));
+    const snap = await getDoc(doc(db, "appConfig", "settings"));
     if (snap.exists()) {
       const data = snap.data() as AppConfig;
       cachedConfig = data;
@@ -76,7 +84,7 @@ export async function getAppConfig(forceRefresh = false): Promise<AppConfig> {
 }
 
 export function subscribeToConfig(callback: (config: AppConfig) => void): Unsubscribe {
-  return onSnapshot(doc(db, "config", "appConfig"), (snap) => {
+  return onSnapshot(doc(db, "appConfig", "settings"), (snap) => {
     if (snap.exists()) {
       const data = snap.data() as AppConfig;
       cachedConfig = data;

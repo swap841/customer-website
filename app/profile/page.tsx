@@ -131,8 +131,6 @@ export default function ProfilePage() {
         try {
           const data = doc.data();
 
-          console.log("Order data:", data);
-
           // Handle date field - use createdAt or date, whichever exists
           let dateValue: Timestamp | { seconds: number };
           const dateField = data.date || data.createdAt;
@@ -173,13 +171,6 @@ export default function ProfilePage() {
           console.error(`Error processing order ${doc.id}:`, error);
         }
       });
-
-      // Debug: Log all orders and their statuses
-      console.log("All orders:", orders.map(o => ({
-        id: o.id,
-        status: o.status,
-        statusLower: o.status.toLowerCase()
-      })));
 
       // Sort by createdAt descending (client-side)
       orders.sort((a, b) => {

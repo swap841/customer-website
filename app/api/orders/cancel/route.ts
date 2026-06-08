@@ -3,10 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const authHeader = req.headers.get("authorization");
 
-    const res = await fetch("https://grocery-server-10ct.onrender.com/api/orders/cancel", {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (authHeader) {
+      headers["Authorization"] = authHeader;
+    }
+
+    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "https://grocery-server-u2qq.onrender.com";
+    const res = await fetch(`${SERVER_URL}/api/orders/cancel`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(body),
     });
 

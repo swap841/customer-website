@@ -15,7 +15,9 @@ export function useProducts(limitCount = 20) {
       const snap = await getDocs(q);
       return snap.docs.map((d) => mapDoc<Product>(d));
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }
 
@@ -28,7 +30,8 @@ export function useProduct(id: string | undefined) {
       if (!snap.exists()) return null;
       return mapDoc<Product>(snap);
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
     enabled: !!id,
   });
 }
@@ -41,7 +44,8 @@ export function useProductsByCategory(categoryId: string) {
       const snap = await getDocs(q);
       return snap.docs.map((d) => mapDoc<Product>(d));
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
     enabled: !!categoryId,
   });
 }

@@ -41,7 +41,7 @@ export default function ProductsPage() {
   useEffect(() => {
     async function fetchCategories() {
       try {
-        const snap = await getDocs(collection(db, "categories"));
+        const snap = await getDocs(query(collection(db, "categories"), where("active", "==", true)));
         const list: Category[] = snap.docs.map((d) => {
           const data = d.data();
           const placeholderImages: Record<string, string> = {

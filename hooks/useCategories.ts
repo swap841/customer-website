@@ -16,7 +16,8 @@ export function useCategories() {
       const cats = snap.docs.map((d) => mapDoc<Category>(d));
       return cats.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -30,7 +31,8 @@ export function useCategoryByName(name: string) {
       if (snap.empty) return null;
       return mapDoc<Category>(snap.docs[0]);
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
     enabled: !!name,
   });
 }

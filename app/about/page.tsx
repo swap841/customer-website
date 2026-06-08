@@ -32,7 +32,24 @@ export default function AboutPage() {
   const achievements: string[] = aboutUs?.achievements || [];
   const teamSize = aboutUs?.teamSize;
 
-  if (loading) return <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 animate-pulse p-8" />;
+  if (loading) return (
+    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="text-center space-y-2 animate-pulse">
+          <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded w-64 mx-auto" />
+          <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-48 mx-auto" />
+        </div>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/50 p-6 md:p-8 animate-pulse">
+          <div className="h-6 bg-zinc-200 dark:bg-zinc-800 rounded w-32 mb-4" />
+          <div className="space-y-2">
+            <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full" />
+            <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-5/6" />
+            <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-4/6" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 py-12 px-4 sm:px-6 lg:px-8">

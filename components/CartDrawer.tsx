@@ -20,6 +20,7 @@ const CartDrawer: React.FC = () => {
     totalItems,
     subtotal,
     deliveryCharge,
+    deliveryChargeConfig,
     taxAmount,
     grandTotal,
     couponCode,
@@ -83,7 +84,7 @@ const CartDrawer: React.FC = () => {
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50/80 rounded-xl border border-gray-100 items-start">
                     <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
-                      <Image src={item.imageUrl || "/images/placeholder.png"} alt={item.name} fill sizes="4rem" className="object-cover rounded-md" />
+                      <Image src={item.imageUrl || "/placeholder-product.png"} alt={item.name} fill sizes="4rem" className="object-cover rounded-md" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium truncate">{item.name}</h3>
@@ -129,7 +130,7 @@ const CartDrawer: React.FC = () => {
                   <div className="flex justify-between">
                     <span>Delivery charge</span>
                     {deliveryCharge === 0 ? (
-                      <span className="flex gap-2"><span className="line-through text-gray-400">₹{deliveryCharge === 0 ? 25 : deliveryCharge}</span><span className="text-blue-600 font-semibold">FREE</span></span>
+                      <span className="flex gap-2"><span className="line-through text-gray-400">₹{deliveryChargeConfig > 0 ? deliveryChargeConfig : 25}</span><span className="text-blue-600 font-semibold">FREE</span></span>
                     ) : <span>₹{deliveryCharge}</span>}
                   </div>
                   <div className="flex justify-between"><span>Tax</span><span>₹{taxAmount}</span></div>

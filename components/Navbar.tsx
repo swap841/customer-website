@@ -80,8 +80,8 @@ export default function Navbar() {
 
   const isActive = (href: string) =>
     pathname === href
-      ? "text-emerald-600 font-bold"
-      : "text-zinc-600 hover:text-emerald-600";
+      ? "text-emerald-600 dark:text-emerald-400 font-bold"
+      : "text-zinc-600 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400";
 
   return (
     <nav className="w-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-zinc-100 dark:border-zinc-800 fixed top-0 left-0 z-50 shadow-sm">

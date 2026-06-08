@@ -47,6 +47,7 @@ export interface ContactInfo {
   taxPercentage: number;
   deliveryFeePerKm: number;
   freeDeliveryAbove: number;
+  thirdPartyDeliveryCharge?: number;
   tagline: string;
   copyrightText: string;
   heroTitle: string;
@@ -62,6 +63,8 @@ export interface ContactInfo {
     facebook?: string;
     instagram?: string;
   };
+  workingHours?: string;
+  responseTime?: string;
 }
 
 export interface Order {

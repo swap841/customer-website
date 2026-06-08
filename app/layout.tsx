@@ -11,6 +11,7 @@ import { Toaster } from "sonner";
 import DynamicBranding from "@/components/DynamicBranding";
 import StoreStatusGate from "@/components/StoreStatusGate";
 import ChatBot from "@/components/ChatBot";
+import DynamicSEO from "@/components/DynamicSEO";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,19 +24,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "My Store — Fresh Groceries Delivered Fast",
+  title: {
+    template: "%s | Fresh Groceries Delivered Fast",
+    default: "Fresh Groceries Delivered Fast",
+  },
   description:
     "Order farm-fresh organic produce, daily essentials & household items online. Fast delivery to your doorstep within 24 hours.",
   keywords: [
     "grocery", "delivery", "fresh produce", "organic", "online grocery",
-    "My Store", "farm fresh", "Satara", "India",
+    "farm fresh", "India",
   ],
   openGraph: {
-    title: "My Store — Fresh Groceries Delivered Fast",
+    title: "Fresh Groceries Delivered Fast",
     description:
       "Order farm-fresh organic produce, daily essentials & household items online. Fast delivery to your doorstep within 24 hours.",
     type: "website",
-    siteName: "My Store",
   },
 };
 
@@ -47,12 +50,28 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var theme = localStorage.getItem('theme');
+                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (theme === 'dark' || (!theme && prefersDark)) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="font-sans antialiased bg-gray-50 dark:bg-zinc-950 dark:text-white">
         <ThemeProvider>
           <QueryProvider>
             <CartProvider>
               <StoreStatusGate>
+                <DynamicSEO />
                 <Navbar />
                 <main className="pt-16 md:pt-24 min-h-screen"><DynamicBranding>{children}</DynamicBranding></main>
                 <Footer />
