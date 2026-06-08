@@ -47,6 +47,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const { totalItems, subtotal, openCart } = useCart();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -99,7 +100,7 @@ export default function Navbar() {
             </a>
           </div>
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-100">
-            {contactInfo.tagline || "Fresh Grocery Express"}
+            {contactInfo.tagline || "Premium Quality, Delivered Fresh"}
           </span>
         </div>
       </div>
@@ -165,7 +166,7 @@ export default function Navbar() {
                 <span className="text-[10px] font-semibold text-emerald-600 leading-tight">
                   {totalItems === 0 ? "Cart" : `${totalItems} Item${totalItems > 1 ? "s" : ""}`}
                 </span>
-                <span className="text-sm font-bold leading-tight">₹{subtotal}</span>
+                <span className="text-sm font-bold leading-tight">{symbol}{subtotal}</span>
               </div>
               {/* Badge */}
               {totalItems > 0 && (

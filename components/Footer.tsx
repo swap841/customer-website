@@ -57,7 +57,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-xs text-zinc-400 leading-relaxed mb-4 max-w-xs">
-              {contactInfo.tagline || "Premium organic produce, daily essentials & household items delivered fresh from local farms to your doorstep."}
+              {contactInfo.tagline || "Premium quality products, daily essentials & household items delivered fresh to your doorstep."}
             </p>
 
             {/* Contact Info */}
@@ -105,7 +105,7 @@ export default function Footer() {
           {/* Shop Links */}
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-white mb-4">
-              Shop
+              {contactInfo.footerShopTitle || "Shop"}
             </h3>
             <ul className="space-y-2.5">
               {footerLinks.shop.map((link) => (
@@ -124,7 +124,7 @@ export default function Footer() {
           {/* Company Links */}
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-white mb-4">
-              Company
+              {contactInfo.footerCompanyTitle || "Company"}
             </h3>
             <ul className="space-y-2.5">
               {footerLinks.company.map((link) => (
@@ -143,7 +143,7 @@ export default function Footer() {
           {/* Legal Links */}
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-white mb-4">
-              Legal
+              {contactInfo.footerLegalTitle || "Legal"}
             </h3>
             <ul className="space-y-2.5">
               {footerLinks.legal.map((link) => (

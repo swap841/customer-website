@@ -128,7 +128,7 @@ export default function ContactPage() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-black bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
-            {contactInfo.storeName} Help Center
+            {contactInfo.storeName} {contactInfo.contactHelpcenterTitle || "Help Center"}
           </h1>
           <p className="text-xs text-zinc-400 font-medium max-w-lg mx-auto">
             Ask our AI assistant anything — it will guide you step by step. Need a human? Just ask!
@@ -146,7 +146,7 @@ export default function ContactPage() {
                 <Phone className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-wider">Call Helpdesk</h3>
+                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-wider">{contactInfo.contactCallHelpdeskTitle || "Call Helpdesk"}</h3>
                 <p className="text-sm font-bold text-zinc-850 dark:text-zinc-200 hover:text-emerald-600 transition-colors">{contactInfo.phone}</p>
                 <span className="text-[10px] text-zinc-400 font-medium block">{contactInfo.workingHours || "9:00 AM - 9:00 PM"}</span>
               </div>
@@ -160,7 +160,7 @@ export default function ContactPage() {
                 <Mail className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-wider">Email Us</h3>
+                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-wider">{contactInfo.contactEmailUsTitle || "Email Us"}</h3>
                 <p className="text-sm font-bold text-zinc-850 dark:text-zinc-200 hover:text-teal-600 transition-colors">{contactInfo.email}</p>
                 <span className="text-[10px] text-zinc-400 font-medium block">{contactInfo.responseTime || "Average response time: 4 hours"}</span>
               </div>
@@ -176,7 +176,7 @@ export default function ContactPage() {
                 <MapPin className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-wider">Corporate Office</h3>
+                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-wider">{contactInfo.contactAddressTitle || "Our Location"}</h3>
                 <p className="text-xs font-bold text-zinc-800 dark:text-zinc-300 leading-relaxed whitespace-pre-line">
                   {contactInfo.address}
                 </p>

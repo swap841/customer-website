@@ -56,17 +56,17 @@ export default function AboutPage() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-black bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
-            About {storeName}
+            {contactInfo.aboutPageTitle || "About"} {storeName}
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">
-            Your trusted partner since {foundingDate.split("-")[0] || "2020"}
+            {contactInfo.aboutPageSubtitle || "Your trusted partner since"} {foundingDate.split("-")[0] || "2020"}
           </p>
         </div>
 
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/50 dark:border-zinc-800 p-6 md:p-8">
           <div className="flex items-center gap-2 mb-4">
             <Building2 className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Our Story</h2>
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{contactInfo.aboutStoryTitle || "Our Story"}</h2>
           </div>
           <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">{story}</p>
         </div>
@@ -75,14 +75,14 @@ export default function AboutPage() {
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/50 dark:border-zinc-800 p-6">
             <div className="flex items-center gap-2 mb-3">
               <Target className="w-5 h-5 text-emerald-600" />
-              <h3 className="font-bold text-zinc-900 dark:text-zinc-100">Our Mission</h3>
+              <h3 className="font-bold text-zinc-900 dark:text-zinc-100">{contactInfo.aboutMissionTitle || "Our Mission"}</h3>
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{mission}</p>
           </div>
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/50 dark:border-zinc-800 p-6">
             <div className="flex items-center gap-2 mb-3">
               <Eye className="w-5 h-5 text-emerald-600" />
-              <h3 className="font-bold text-zinc-900 dark:text-zinc-100">Our Vision</h3>
+              <h3 className="font-bold text-zinc-900 dark:text-zinc-100">{contactInfo.aboutVisionTitle || "Our Vision"}</h3>
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{vision}</p>
           </div>
@@ -92,7 +92,7 @@ export default function AboutPage() {
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/50 dark:border-zinc-800 p-6">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Achievements</h2>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{contactInfo.aboutAchievementsTitle || "Achievements"}</h2>
             </div>
             <ul className="space-y-2">
               {achievements.map((a, i) => (

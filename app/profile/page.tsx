@@ -21,6 +21,7 @@ import {
   where,
 } from "firebase/firestore";
 import { MoreVertical, AlertTriangle, PackageX, RefreshCw, Send, MessageSquare, Loader2 } from "lucide-react";
+import { useContactInfo } from "@/hooks/useContactInfo";
 
 
 // --- Type Definitions ---
@@ -64,6 +65,8 @@ const CURRENT_STATUSES = ["pending", "packing", "assigned", "ready to dispatch",
 const PAST_STATUSES = ["delivered", "completed", "fulfilled", "cancelled"];
 
 export default function ProfilePage() {
+  const { contactInfo } = useContactInfo();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
   const [user, setUser] = useState<User | null>(null);
   const [customerData, setCustomerData] = useState<CustomerData>({
     name: "",
@@ -568,7 +571,7 @@ export default function ProfilePage() {
         {/* Current Orders */}
         <h2 className="text-xl font-black text-zinc-900 mb-4 flex items-center gap-2">
           <span className="w-2 h-6 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></span>
-          Current Orders
+          {contactInfo.profileCurrentOrders || "Current Orders"}
         </h2>
 
         {loading ? (
@@ -601,7 +604,7 @@ export default function ProfilePage() {
                 </div>
 
                 <p className="text-sm text-gray-700">
-                  <span className="font-semibold">Total:</span> ₹{order.totalAmount}
+                  <span className="font-semibold">Total:</span> {symbol}{order.totalAmount}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   <span className="font-medium">Deliver to:</span> {getOrderAddress(order)}
@@ -618,7 +621,7 @@ export default function ProfilePage() {
         {/* Past Orders */}
         <h2 className="text-xl font-black text-zinc-900 mt-8 mb-4 flex items-center gap-2">
           <span className="w-2 h-6 bg-gradient-to-b from-zinc-400 to-zinc-300 rounded-full"></span>
-          Past Orders
+          {contactInfo.profilePastOrders || "Past Orders"}
         </h2>
 
         {loading ? (
@@ -678,7 +681,7 @@ export default function ProfilePage() {
                 </div>
 
                 <p className="text-sm text-gray-700">
-                  <span className="font-semibold">Total:</span> ₹{order.totalAmount}
+                  <span className="font-semibold">Total:</span> {symbol}{order.totalAmount}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   <span className="font-medium">Deliver to:</span> {getOrderAddress(order)}

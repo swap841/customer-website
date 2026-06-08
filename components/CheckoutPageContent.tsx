@@ -66,12 +66,13 @@ interface RazorpayInstance {
   on: (event: string, callback: () => void) => void;
 }
 
-const EXPRESS_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://grocery-server-u2qq.onrender.com';
+  const EXPRESS_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://grocery-server-u2qq.onrender.com';
 
 export default function CheckoutPageContent() {
   const router = useRouter();
   const auth = getAuth();
   const { contactInfo } = useContactInfo();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
 
   const MAX_DIRECT_DELIVERY_KM = contactInfo.deliveryRadiusKm || 20;
   const TAX_PERCENT = contactInfo.taxPercentage || 5;
@@ -152,7 +153,7 @@ export default function CheckoutPageContent() {
     setDistanceKm(Math.round(dist * 10) / 10);
     if (dist > MAX_DIRECT_DELIVERY_KM) {
       setIsThirdPartyDelivery(true);
-      toast(`You are ${dist.toFixed(1)} km away. Additional delivery charge of ₹${THIRD_PARTY_DELIVERY_CHARGE} will apply.`);
+      toast(`You are ${dist.toFixed(1)} km away. Additional delivery charge of ${symbol}${THIRD_PARTY_DELIVERY_CHARGE} will apply.`);
     } else {
       setIsThirdPartyDelivery(false);
     }
@@ -207,7 +208,7 @@ export default function CheckoutPageContent() {
         setCouponMessage(result.error || "Coupon could not be applied");
       } else {
         setCouponDiscount(result.discount || 0);
-        setCouponMessage(`Coupon applied! Discount ₹${result.discount?.toFixed(0)}`);
+        setCouponMessage(`Coupon applied! Discount ${symbol}${result.discount?.toFixed(0)}`);
       }
     } catch {
       setCouponDiscount(0);
@@ -576,7 +577,7 @@ export default function CheckoutPageContent() {
                     {opt === "delivery" ? <><Truck className="w-4 h-4" /> Home Delivery</> : <><Store className="w-4 h-4" /> Store Pickup</>}
                   </h3>
                   <p className="text-sm text-gray-600">{opt === "delivery" ? "Get it delivered to your address" : "Pick up from our store"}</p>
-                  <p className="text-sm font-medium mt-1">{opt === "delivery" ? `Delivery: ₹${deliveryCharge}` : "Free pickup"}</p>
+                  <p className="text-sm font-medium mt-1">{opt === "delivery" ? `Delivery: ${symbol}${deliveryCharge}` : "Free pickup"}</p>
                 </div>
               </div>
             </div>
@@ -590,7 +591,7 @@ export default function CheckoutPageContent() {
           <div>
             <h3 className="font-semibold text-amber-800">Extended Delivery</h3>
             <p className="text-amber-700 text-sm mt-1">
-              You are {distanceKm} km away. Additional delivery charge of <span className="font-bold">₹{THIRD_PARTY_DELIVERY_CHARGE}</span> will apply.
+              You are {distanceKm} km away. Additional delivery charge of <span className="font-bold">{symbol}{THIRD_PARTY_DELIVERY_CHARGE}</span> will apply.
             </p>
           </div>
         </div>
@@ -667,7 +668,7 @@ export default function CheckoutPageContent() {
                 <div>
                   <h3 className="font-semibold text-blue-800">Store Pickup Information</h3>
                   <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address || "Store address not set")}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 text-sm mt-1 flex items-center gap-1 hover:underline"><MapPin className="w-3.5 h-3.5" /> {contactInfo.address || "Store address not set"}</a>
-                  <p className="text-blue-600 text-sm mt-2 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Pickup Hours: 9:00 AM - 9:00 PM</p>
+                  <p className="text-blue-600 text-sm mt-2 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Pickup Hours: {contactInfo.pickupHours || "9:00 AM - 9:00 PM"}</p>
                 </div>
               </div>
             </div>
@@ -677,26 +678,26 @@ export default function CheckoutPageContent() {
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
         <h2 className="font-bold text-lg mb-4 text-gray-800">Bill Summary</h2>
         <div className="space-y-3">
-          <div className="flex justify-between py-2"><span className="text-gray-600">Items total ({cartItems.length} items)</span><span className="font-medium">₹{subtotal}</span></div>
+          <div className="flex justify-between py-2"><span className="text-gray-600">Items total ({cartItems.length} items)</span><span className="font-medium">{symbol}{subtotal}</span></div>
           {deliveryOption === "delivery" && (
             <div className="flex justify-between py-2">
               <span className="text-gray-600">Delivery</span>
-              <span className="font-medium">{effectiveDeliveryFee === 0 ? <span className="text-blue-600 font-semibold">FREE</span> : `₹${effectiveDeliveryFee}`}</span>
+              <span className="font-medium">{effectiveDeliveryFee === 0 ? <span className="text-blue-600 font-semibold">FREE</span> : `${symbol}${effectiveDeliveryFee}`}</span>
             </div>
           )}
-          <div className="flex justify-between py-2"><span className="text-gray-600">Tax</span><span className="font-medium">₹{taxAmount}</span></div>
+          <div className="flex justify-between py-2"><span className="text-gray-600">Tax</span><span className="font-medium">{symbol}{taxAmount}</span></div>
           {isThirdPartyDelivery && deliveryOption === "delivery" && (
-            <div className="flex justify-between py-2 text-amber-700"><span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> Extended distance fee</span><span className="font-medium">₹{THIRD_PARTY_DELIVERY_CHARGE}</span></div>
+            <div className="flex justify-between py-2 text-amber-700"><span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> Extended distance fee</span><span className="font-medium">{symbol}{THIRD_PARTY_DELIVERY_CHARGE}</span></div>
           )}
           {couponDiscount > 0 && (
-            <div className="flex justify-between py-2 text-emerald-600 font-semibold"><span>Coupon discount</span><span>-₹{couponDiscount}</span></div>
+            <div className="flex justify-between py-2 text-emerald-600 font-semibold"><span>Coupon discount</span><span>-{symbol}{couponDiscount}</span></div>
           )}
           <div className="border-t pt-3 mt-2">
-            <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span className="text-emerald-600">₹{finalTotal}</span></div>
+            <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span className="text-emerald-600">{symbol}{finalTotal}</span></div>
           </div>
           {deliveryOption === "delivery" && totalSavings > 0 && (
             <div className="bg-emerald-50 rounded-xl p-3 mt-3">
-              <p className="text-emerald-700 text-sm flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> You saved ₹{totalSavings} on delivery!</p>
+              <p className="text-emerald-700 text-sm flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> You saved {symbol}{totalSavings} on delivery!</p>
             </div>
           )}
         </div>
@@ -763,7 +764,7 @@ export default function CheckoutPageContent() {
           </button>
         </div>
         {couponMessage && <p className="mt-3 text-sm text-gray-700">{couponMessage}</p>}
-        {couponDiscount > 0 && <p className="mt-2 text-sm text-emerald-700">Discount applied: ₹{couponDiscount.toFixed(0)}</p>}
+        {couponDiscount > 0 && <p className="mt-2 text-sm text-emerald-700">Discount applied: {symbol}{couponDiscount.toFixed(0)}</p>}
       </div>
 
       <button onClick={placeOrder} disabled={isLoading || isSubmitting}
@@ -771,7 +772,7 @@ export default function CheckoutPageContent() {
         {isLoading ? (
           <><Loader2 className="w-5 h-5 animate-spin" /> {paymentMethod === "Online" ? "Opening Payment Gateway..." : "Placing Order..."}</>
         ) : (
-          <>{paymentMethod === "Online" ? `Pay ₹${finalTotal} with Razorpay` : `Place Order - ₹${finalTotal}`}</>
+          <>{paymentMethod === "Online" ? `Pay ${symbol}${finalTotal} with Razorpay` : `Place Order - ${symbol}${finalTotal}`}</>
         )}
       </button>
     </div>

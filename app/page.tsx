@@ -15,7 +15,13 @@ export default function Home() {
   const { data: banners, isLoading: bannersLoading } = useBanners();
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  const symbol = contactInfo.currencySymbol || "\u20B9";
   const bannerList = banners ?? [];
+  const badgeText = contactInfo.heroBadgeText || `${contactInfo.storeName} \u2013 Fast delivery`;
+  const freeDeliveryDesc = (contactInfo.freeDeliveryDescription || "Get free delivery on orders above {symbol}{amount}")
+    .replace("{symbol}", symbol).replace("{amount}", String(contactInfo.freeDeliveryAbove));
+  const freeDeliveryMore = (contactInfo.freeDeliveryAddMore || "Add {symbol}{amount} more for free delivery")
+    .replace("{symbol}", symbol).replace("{amount}", String(Math.round(contactInfo.freeDeliveryAbove * 0.4)));
 
   useEffect(() => {
     if (bannerList.length <= 1) return;
@@ -43,7 +49,7 @@ export default function Home() {
           <div className="relative">
             <div className="relative inline-flex items-center gap-2 rounded-[20px] border border-emerald-200/60 bg-white/70 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm animate-pulse">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              {contactInfo.storeName} – Fast grocery delivery
+              {badgeText}
             </div>
             <h1 className="mt-6 text-4xl font-black tracking-tight text-gray-900 sm:text-5xl lg:text-6xl leading-[1.1]">
               {contactInfo.heroTitle || "Fresh groceries, delivered in 24 hours"}
@@ -56,14 +62,14 @@ export default function Home() {
                 href="/products"
                 className="group inline-flex items-center gap-2 rounded-[20px] bg-gradient-to-r from-emerald-600 to-teal-600 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all duration-300"
               >
-                Start shopping
+                {contactInfo.heroCtaText || "Start shopping"}
                 <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
               <Link
                 href="/category/vegetables"
                 className="inline-flex items-center gap-2 rounded-[20px] border-2 border-emerald-200 bg-white/70 backdrop-blur-sm px-7 py-3.5 text-sm font-bold text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-300"
               >
-                Explore categories
+                {contactInfo.heroSecondaryCtaText || "Explore categories"}
               </Link>
             </div>
           </div>
@@ -72,7 +78,7 @@ export default function Home() {
           <div className="flex justify-center w-full">
             {bannersLoading ? (
               <div className="w-full aspect-[4/3] rounded-[20px] bg-emerald-100/50 animate-pulse flex items-center justify-center text-emerald-700 font-bold shadow-lg">
-                Loading Banners...
+                Loading...
               </div>
             ) : bannerList.length > 0 ? (
               <div className="w-full relative aspect-[4/3] rounded-[20px] overflow-hidden shadow-xl shadow-emerald-500/10 border border-emerald-100/60 group">
@@ -111,10 +117,10 @@ export default function Home() {
               </div>
             ) : (
               <div className="w-full relative aspect-[4/3] rounded-[20px] overflow-hidden bg-white/80 backdrop-blur-sm border border-emerald-100/60 flex flex-col items-center justify-center p-6 shadow-xl shadow-emerald-500/10 text-center">
-                <div className="text-7xl mb-4">🥦🍎🥛</div>
+                <div className="text-7xl mb-4">{contactInfo.defaultBannerEmojis || "\uD83E\uDD66\uD83C\uDF4E\uD83E\uDD5B"}</div>
                 <h3 className="text-xl font-bold text-gray-900">{contactInfo.storeName}</h3>
                 <p className="text-sm text-gray-500 mt-2 max-w-xs">
-                  {contactInfo.tagline || "Premium grocery delivery directly from local farmers."}
+                  {contactInfo.defaultBannerTagline || contactInfo.tagline || "Premium products delivered fresh."}
                 </p>
               </div>
             )}
@@ -124,12 +130,12 @@ export default function Home() {
         {/* ─── Category Chips (Horizontal Scroll) ─── */}
         <section className="mt-16">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-black text-gray-900">Shop by category</h2>
+            <h2 className="text-lg font-black text-gray-900">{contactInfo.categorySectionTitle || "Shop by category"}</h2>
             <Link
               href="/products"
               className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"
             >
-              View all <ArrowRight className="h-3.5 w-3.5" />
+              {contactInfo.categorySectionViewAll || "View all"} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
@@ -161,11 +167,11 @@ export default function Home() {
         <section className="mt-14">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-emerald-700 font-bold">Today&#39;s best</p>
-              <h2 className="mt-3 text-3xl font-black text-gray-900">Fresh picks for you</h2>
+              <p className="text-sm uppercase tracking-[0.24em] text-emerald-700 font-bold">{contactInfo.trendingSectionLabel || "Today\u2019s best"}</p>
+              <h2 className="mt-3 text-3xl font-black text-gray-900">{contactInfo.trendingSectionTitle || "Popular picks for you"}</h2>
             </div>
             <Link href="/products" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
-              Browse all <ArrowRight className="inline-block h-4 w-4" />
+              {contactInfo.trendingSectionBrowseAll || "Browse all"} <ArrowRight className="inline-block h-4 w-4" />
             </Link>
           </div>
 
@@ -220,9 +226,9 @@ export default function Home() {
                     </div>
                     <div className="mt-4 flex items-center justify-between gap-3">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-extrabold text-emerald-700">₹{product.price}</span>
+                        <span className="text-lg font-extrabold text-emerald-700">{symbol}{product.price}</span>
                         {hasDiscount && (
-                          <span className="text-sm text-zinc-400 line-through">₹{mrp}</span>
+                          <span className="text-sm text-zinc-400 line-through">{symbol}{mrp}</span>
                         )}
                       </div>
                       <span className="text-xs font-medium text-zinc-500 bg-zinc-50 px-2.5 py-1 rounded-full">{product.weight}{product.unit}</span>
@@ -241,16 +247,16 @@ export default function Home() {
           <div className="relative z-10">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h3 className="text-xl font-black tracking-tight">Free delivery</h3>
+                <h3 className="text-xl font-black tracking-tight">{contactInfo.freeDeliveryTitle || "Free delivery"}</h3>
                 <p className="text-emerald-100 text-sm mt-1">
-                  Get free delivery on orders above ₹{contactInfo.freeDeliveryAbove}
+                  {freeDeliveryDesc}
                 </p>
               </div>
               <Link
                 href="/products"
                 className="shrink-0 inline-flex items-center gap-2 rounded-[20px] bg-white/20 backdrop-blur-sm border border-white/30 px-6 py-2.5 text-sm font-bold hover:bg-white/30 transition-all duration-300"
               >
-                Start shopping <ArrowRight className="h-4 w-4" />
+                {contactInfo.freeDeliveryCtaText || "Start shopping"} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
             <div className="mt-5 h-3 rounded-full bg-white/20 overflow-hidden">
@@ -259,7 +265,7 @@ export default function Home() {
               </div>
             </div>
             <p className="text-emerald-100 text-xs mt-2 font-medium">
-              Add ₹{(contactInfo.freeDeliveryAbove * 0.4).toFixed(0)} more for free delivery
+              {freeDeliveryMore}
             </p>
           </div>
         </section>
@@ -268,14 +274,14 @@ export default function Home() {
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-t border-emerald-100/60 shadow-[0_-8px_30px_-4px_rgba(0,0,0,0.08)] px-4 py-3 sm:hidden">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs text-zinc-500 font-medium">Start your order</p>
-              <p className="text-sm font-bold text-gray-900">Fresh groceries await</p>
+              <p className="text-xs text-zinc-500 font-medium">{contactInfo.orderPromptLabel || "Start your order"}</p>
+              <p className="text-sm font-bold text-gray-900">{contactInfo.orderPromptTitle || "Your items await"}</p>
             </div>
             <Link
               href="/products"
               className="inline-flex items-center gap-2 rounded-[20px] bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
             >
-              Shop now <ArrowRight className="h-4 w-4" />
+              {contactInfo.orderPromptCtaText || "Shop now"} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
