@@ -6,12 +6,34 @@
   --background: #f8fafc;
   --foreground: #1e293b;
   --primary: #059669;
-  --primary-light: #d1fae5;
-  --primary-dark: #047857;
   --accent: #0D9488;
   --font-family: Inter, system-ui, -apple-system, sans-serif;
   --surface: #ffffff;
   --text-secondary: #64748b;
+
+  /* Primary palette — derived from --primary via color-mix() */
+  --primary-50: color-mix(in srgb, var(--primary) 12%, white);
+  --primary-100: color-mix(in srgb, var(--primary) 22%, white);
+  --primary-200: color-mix(in srgb, var(--primary) 32%, white);
+  --primary-300: color-mix(in srgb, var(--primary) 47%, white);
+  --primary-400: color-mix(in srgb, var(--primary) 67%, white);
+  --primary-500: var(--primary);
+  --primary-600: color-mix(in srgb, var(--primary) 82%, black);
+  --primary-700: color-mix(in srgb, var(--primary) 72%, black);
+  --primary-800: color-mix(in srgb, var(--primary) 62%, black);
+  --primary-900: color-mix(in srgb, var(--primary) 52%, black);
+
+  /* Accent palette — derived from --accent via color-mix() */
+  --accent-50: color-mix(in srgb, var(--accent) 12%, white);
+  --accent-100: color-mix(in srgb, var(--accent) 22%, white);
+  --accent-200: color-mix(in srgb, var(--accent) 32%, white);
+  --accent-300: color-mix(in srgb, var(--accent) 47%, white);
+  --accent-400: color-mix(in srgb, var(--accent) 67%, white);
+  --accent-500: var(--accent);
+  --accent-600: color-mix(in srgb, var(--accent) 82%, black);
+  --accent-700: color-mix(in srgb, var(--accent) 72%, black);
+  --accent-800: color-mix(in srgb, var(--accent) 62%, black);
+  --accent-900: color-mix(in srgb, var(--accent) 52%, black);
 }
 
 @theme inline {
@@ -19,6 +41,55 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Override emerald palette with dynamic primary colors */
+@theme {
+  --color-emerald-50: var(--primary-50);
+  --color-emerald-100: var(--primary-100);
+  --color-emerald-200: var(--primary-200);
+  --color-emerald-300: var(--primary-300);
+  --color-emerald-400: var(--primary-400);
+  --color-emerald-500: var(--primary-500);
+  --color-emerald-600: var(--primary-600);
+  --color-emerald-700: var(--primary-700);
+  --color-emerald-800: var(--primary-800);
+  --color-emerald-900: var(--primary-900);
+
+  /* Override teal palette with dynamic accent colors */
+  --color-teal-50: var(--accent-50);
+  --color-teal-100: var(--accent-100);
+  --color-teal-200: var(--accent-200);
+  --color-teal-300: var(--accent-300);
+  --color-teal-400: var(--accent-400);
+  --color-teal-500: var(--accent-500);
+  --color-teal-600: var(--accent-600);
+  --color-teal-700: var(--accent-700);
+  --color-teal-800: var(--accent-800);
+  --color-teal-900: var(--accent-900);
+
+  /* Also expose as primary/accent for direct use */
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+
+  --color-accent-50: var(--accent-50);
+  --color-accent-100: var(--accent-100);
+  --color-accent-200: var(--accent-200);
+  --color-accent-300: var(--accent-300);
+  --color-accent-400: var(--accent-400);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
+  --color-accent-700: var(--accent-700);
+  --color-accent-800: var(--accent-800);
+  --color-accent-900: var(--accent-900);
 }
 
 body {
@@ -125,6 +196,6 @@ html {
 
 /* ─── Selection color ─── */
 ::selection {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: var(--primary-100, #d1fae5);
+  color: var(--primary-800, #065f46);
 }

@@ -5,6 +5,7 @@ export interface AppConfig {
   business?: {
     name?: string;
     logoUrl?: string;
+    faviconUrl?: string;
     primaryColor?: string;
     accentColor?: string;
     font?: string;
