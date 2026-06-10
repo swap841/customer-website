@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getMessaging, getToken } from "firebase/messaging";
+import { getAppConfig } from "./appConfig";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,6 +12,15 @@ const firebaseConfig = {
 };
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "https://grocery-server-u2qq.onrender.com";
+
+async function getVapidKey(): Promise<string> {
+  try {
+    const config = await getAppConfig();
+    const vapidKey = (config as any).notifications?.vapidKey;
+    if (vapidKey) return vapidKey;
+  } catch {}
+  return process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || "";
+}
 
 export async function requestFcmToken(uid: string): Promise<string | null> {
   try {
@@ -25,9 +35,13 @@ export async function requestFcmToken(uid: string): Promise<string | null> {
       return null;
     }
     
-    const token = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-    });
+    const vapidKey = await getVapidKey();
+    if (!vapidKey) {
+      console.error("[FCM] No VAPID key configured. Set it in Dashboard → Settings → Notifications.");
+      return null;
+    }
+    
+    const token = await getToken(messaging, { vapidKey });
     
     if (token) {
       await fetch(`${SERVER_URL}/api/fcm/register`, {
@@ -54,7 +68,7 @@ export async function sendCheckoutOTP(phoneNumber: string, userId: string): Prom
     });
     const data = await response.json();
     return data;
-  } catch (error) {
+  } catch {
     return { success: false, error: "Network error. Please check your connection." };
   }
 }
@@ -68,7 +82,7 @@ export async function verifyCheckoutOTP(phoneNumber: string, otp: string, userId
     });
     const data = await response.json();
     return data;
-  } catch (error) {
+  } catch {
     return { success: false, error: "Network error. Please check your connection." };
   }
 }

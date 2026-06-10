@@ -55,8 +55,14 @@ export interface AppConfig {
     metaDescription?: string;
     metaKeywords?: string[];
   };
+  notifications?: {
+    vapidKey?: string;
+  };
   ai?: {
     geminiApiKey?: string;
+  };
+  monitoring?: {
+    sentryDsn?: string;
   };
 }
 
