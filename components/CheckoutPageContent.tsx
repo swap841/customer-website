@@ -4,13 +4,18 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "./CartContext";
 import { getAuth } from "firebase/auth";
-import { getAreaCode } from "../utils/getAreaCode";
+import { getAreaCode, getAreaCodeFromAddress } from "../utils/getAreaCode";
 import { getDistanceKm } from "@/utils/distance";
 import { doc, setDoc, collection, writeBatch, increment, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { validateCoupon } from "../utils/coupon";
 import TimeSlotPicker, { type TimeSlot } from "./TimeSlotPicker";
+import LocationPicker from "./LocationPicker";
+import AddressVerification from "./AddressVerification";
+import DeliveryRadiusWarning from "./DeliveryRadiusWarning";
+import PincodeInput from "./PincodeInput";
 import { toast } from "sonner";
+import type { DeliveryZoneInfo, PincodeValidation } from "@/lib/locationUtils";
 import {
   MapPin,
   Truck,
@@ -32,6 +37,7 @@ import { useContactInfo } from "@/hooks/useContactInfo";
 import { useAddresses } from "@/hooks/useAddresses";
 import AddressHistory from "@/components/AddressHistory";
 import { getAppConfig } from "@/lib/appConfig";
+import PhoneVerification from "@/components/PhoneVerification";
 
 const STORE_LAT_DEFAULT = 17.6868;
 const STORE_LNG_DEFAULT = 74.0066;
@@ -94,7 +100,9 @@ export default function CheckoutPageContent() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneVerified, setPhoneVerified] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoHash, setGeoHash] = useState("");
   const [areaCode, setAreaCode] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [isLoading, setIsLoading] = useState(false);
@@ -108,6 +116,8 @@ export default function CheckoutPageContent() {
   const [isThirdPartyDelivery, setIsThirdPartyDelivery] = useState(false);
   const [preferredSlot, setPreferredSlot] = useState<TimeSlot>("morning");
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
+  const [deliveryZone, setDeliveryZone] = useState<DeliveryZoneInfo | null>(null);
+  const [pincodeValidated, setPincodeValidated] = useState(false);
   const { savedAddresses, saveAddress, deleteAddress } = useAddresses();
 
   const savedAddressStrings = savedAddresses.map((a) => a.address);
@@ -157,41 +167,49 @@ export default function CheckoutPageContent() {
     } else {
       setIsThirdPartyDelivery(false);
     }
+  }, [MAX_DIRECT_DELIVERY_KM, THIRD_PARTY_DELIVERY_CHARGE, STORE_LAT, STORE_LNG, symbol]);
+
+  const handleLocationSelected = useCallback((data: {
+    lat: number;
+    lng: number;
+    geoHash: string;
+    zone: DeliveryZoneInfo;
+  }) => {
+    setLocation({ lat: data.lat, lng: data.lng });
+    setGeoHash(data.geoHash);
+    setAreaCode(getAreaCode(data.lat, data.lng));
+    setDistanceKm(data.zone.distanceKm);
+    setIsThirdPartyDelivery(data.zone.deliveryType === "thirdParty");
+    setDeliveryZone(data.zone);
   }, []);
 
-  useEffect(() => {
-    if (deliveryOption === "delivery") {
-      if (!navigator.geolocation) {
-        console.warn("Geolocation not supported");
-        return;
-      }
-      setIsLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setLocation(coords);
-          setAreaCode(getAreaCode(coords.lat, coords.lng));
-          checkDistance(coords.lat, coords.lng);
-          setIsLoading(false);
-        },
-        () => setIsLoading(false),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
+  const handlePincodeValidated = useCallback((validation: PincodeValidation) => {
+    setPincodeValidated(validation.valid);
+    if (validation.valid && validation.city) {
+      // Auto-fill city from pincode if address is empty
     }
-  }, [deliveryOption, checkDistance]);
+  }, []);
 
   const saveUserProfile = async () => {
     if (!user) return;
     try {
       const userRef = doc(db, "users", user.uid);
       await setDoc(userRef, {
-        name, phone, address,
+        name, phone,
+        shippingAddress: deliveryOption === "delivery" ? {
+          address,
+          pincode: address.match(/\b\d{6}\b/)?.[0] || "",
+          lat: location?.lat || null,
+          lng: location?.lng || null,
+          geoHash: geoHash || "",
+          label: selectedAddressLabel || "Home",
+        } : null,
         geolocation: location ? `${location.lat.toFixed(6)},${location.lng.toFixed(6)}` : "",
         email: user.email,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
     } catch (error) {
-      console.error("Error updating profile:", error);
+      // Profile update error handled silently
     }
   };
 
@@ -236,7 +254,7 @@ export default function CheckoutPageContent() {
       await batch.commit();
       return orderId;
     } catch (error) {
-      console.error("Error saving order:", error);
+      // Order save error handled silently
       return null;
     }
   };
@@ -332,14 +350,12 @@ export default function CheckoutPageContent() {
               if (address && deliveryOption === "delivery") {
                 saveAddress(address, location?.lat, location?.lng, selectedAddressLabel || undefined);
               }
-              // Dual-write to ensure order exists in both locations
               await saveOrderToFirestore(orderData);
               toast.dismiss(paymentToastId);
               toast.success("Payment successful! Order placed.");
               if (clearCart) clearCart();
               router.push(`/order-success?orderId=${verifyData.orderId}`);
             } else {
-              // Fallback: save order directly if server didn't
               const fallbackId = await saveOrderToFirestore(orderData);
               toast.dismiss(paymentToastId);
               if (fallbackId) {
@@ -350,7 +366,7 @@ export default function CheckoutPageContent() {
               }
             }
           } catch (error) {
-            console.error("Error verifying payment:", error);
+            // Payment verification error handled silently
             toast.dismiss(paymentToastId);
             toast.error("An error occurred after payment.");
             setIsLoading(false);
@@ -380,7 +396,7 @@ export default function CheckoutPageContent() {
       });
       rzp.open();
     } catch (error) {
-      console.error("Razorpay error:", error);
+      // Razorpay error handled silently
       toast.dismiss(toastId);
       toast.error("Payment initialization failed.");
       setIsLoading(false);
@@ -390,16 +406,20 @@ export default function CheckoutPageContent() {
 
   const placeOrder = async () => {
     if (isSubmitting) return;
-    if (!name) { toast.error("Please enter your name"); return; }
+    if (!name || name.trim().length < 2) { toast.error("Please enter your full name"); return; }
     if (!phone) { toast.error("Please enter your phone number"); return; }
+    if (!/^\d{10}$/.test(phone.replace(/\D/g, ''))) { toast.error("Please enter a valid 10-digit phone number"); return; }
     if (deliveryOption === "delivery") {
+      if (!location) { toast.error("Please set your delivery location"); return; }
       if (!address) { toast.error("Please enter delivery address"); return; }
+      if (!address.match(/\b\d{6}\b/)) { toast.error("Please include a 6-digit pincode in your address"); return; }
     } else {
       setLocation({ lat: 0, lng: 0 });
       setAreaCode("PICKUP");
     }
     if (!user) { toast.error("Please login to place an order"); return; }
     if (cartItems.length === 0) { toast.error("Your cart is empty"); return; }
+    if (!phoneVerified) { toast.error("Please verify your phone number with OTP"); return; }
 
     setIsSubmitting(true);
     setIsLoading(true);
@@ -448,10 +468,18 @@ export default function CheckoutPageContent() {
         address: {
           name, phone,
           addressLine: deliveryOption === "delivery" ? address : "Store Pickup",
-          pincode: deliveryOption === "delivery" ? areaCode : "000000",
+          pincode: deliveryOption === "delivery" ? (address.match(/\b\d{6}\b/)?.[0] || areaCode) : "000000",
           city: deliveryOption === "delivery" ? "" : "Store Pickup",
           lat: location?.lat || null, lng: location?.lng || null,
         },
+        deliveryLocation: deliveryOption === "delivery" && location ? {
+          lat: location.lat,
+          lng: location.lng,
+          geoHash: geoHash || "",
+          distanceKm: distanceKm || 0,
+          partition: deliveryZone?.partition || "",
+          deliveryType: deliveryZone?.deliveryType || "own",
+        } : null,
         status: "Pending",
         subtotal,
         deliveryCharge,
@@ -461,7 +489,7 @@ export default function CheckoutPageContent() {
         totalWeight,
         payment: { method: payMethod, status: "pending" },
         paymentMethod: payMethod,
-        areaCode: deliveryOption === "delivery" ? areaCode : "PICKUP",
+        areaCode: deliveryOption === "delivery" ? (getAreaCodeFromAddress(address) || areaCode) : "PICKUP",
         outOfCity,
         estimatedDeliveryDate: estimatedDeliveryDate.toISOString(),
         createdAt: now,
@@ -473,7 +501,6 @@ export default function CheckoutPageContent() {
       if (paymentMethod === "Online") {
         await handleRazorpayPayment(orderData);
       } else {
-        // COD - client-side batch write to orders + users/{uid}/orders collections
         const batch = writeBatch(db);
         const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         const orderDataWithMeta = {
@@ -508,40 +535,17 @@ export default function CheckoutPageContent() {
           if (clearCart) clearCart();
           router.push(`/order-success?orderId=${orderId}`);
         } catch (error: any) {
-          console.error("Order failed:", error);
+          // Order batch error handled silently
           toast.error(error?.message || "Failed to place order. Please try again.");
         }
       }
     } catch (error) {
-      console.error("Error placing order:", error);
+      // Order placement error handled silently
       toast.error("An error occurred while placing your order.");
     } finally {
       setIsSubmitting(false);
       if (paymentMethod === "COD") setIsLoading(false);
     }
-  };
-
-  const getDeliveryLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported by your browser");
-      return;
-    }
-    setIsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setLocation(coords);
-        setAreaCode(getAreaCode(coords.lat, coords.lng));
-        checkDistance(coords.lat, coords.lng);
-        setIsLoading(false);
-        toast.success("Delivery location updated successfully!");
-      },
-      () => {
-        setIsLoading(false);
-        toast.error("Failed to get location. Please enable location permissions.");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
   };
 
   return (
@@ -585,17 +589,7 @@ export default function CheckoutPageContent() {
         </div>
       </div>
 
-      {isThirdPartyDelivery && deliveryOption === "delivery" && (
-        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 mb-6 flex items-start gap-3">
-          <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-amber-800">Extended Delivery</h3>
-            <p className="text-amber-700 text-sm mt-1">
-              You are {distanceKm} km away. Additional delivery charge of <span className="font-bold">{symbol}{THIRD_PARTY_DELIVERY_CHARGE}</span> will apply.
-            </p>
-          </div>
-        </div>
-      )}
+      {deliveryZone && <DeliveryRadiusWarning zone={deliveryZone} symbol={symbol} thirdPartyCharge={THIRD_PARTY_DELIVERY_CHARGE} />}
 
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
         <h2 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2"><User className="w-5 h-5 text-emerald-600" /> Your Details</h2>
@@ -605,31 +599,52 @@ export default function CheckoutPageContent() {
             <input className="w-full bg-transparent outline-none text-gray-800 text-sm" placeholder="Enter your full name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div className="rounded-xl border border-gray-200 p-3 bg-gray-50/50 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-50 transition-all">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Phone Number</label>
-            <input className="w-full bg-transparent outline-none text-gray-800 text-sm" placeholder="Enter your phone number" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" required />
+            <PhoneVerification
+              userId={user?.uid || ""}
+              initialPhone={phone}
+              onVerified={(p) => { setPhone(p); setPhoneVerified(true); }}
+              onPhoneChange={setPhone}
+            />
           </div>
         </div>
         {deliveryOption === "delivery" && (
             <>
-              <div className="rounded-2xl border border-gray-200 p-4 bg-white focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-50 transition-all">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Delivery Address *</label>
-                <textarea
-                  className="w-full bg-transparent outline-none text-gray-800 resize-none text-sm leading-relaxed"
-                  placeholder="Enter your complete delivery address with landmarks..."
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  rows={3}
-                  required
+              <div className="mb-4">
+                <LocationPicker
+                  onLocationSelected={handleLocationSelected}
+                  disabled={isLoading}
+                  storeLat={STORE_LAT}
+                  storeLng={STORE_LNG}
                 />
-                {location && (
-                  <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
-                    <MapPin className="w-3 h-3 text-emerald-500" />
-                    <span className="text-[11px] text-gray-400 font-medium">
-                      {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
-                      {distanceKm !== null && ` \u00B7 ${distanceKm} km from store`}
-                    </span>
-                  </div>
-                )}
+              </div>
+
+              <AddressVerification
+                address={address}
+                onAddressChange={setAddress}
+                pincode={address.match(/\b\d{6}\b/)?.[0] || ""}
+                onPincodeValidated={handlePincodeValidated}
+                disabled={isLoading}
+              />
+
+              {location && (
+                <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
+                  <MapPin className="w-3 h-3 text-emerald-500" />
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                    {distanceKm !== null && ` \u00B7 ${distanceKm} km from store`}
+                    {deliveryZone && ` \u00B7 ${deliveryZone.deliveryType === "own" ? "Local delivery" : "Extended delivery"}`}
+                  </span>
+                </div>
+              )}
+
+              <div className="mt-3">
+                <PincodeInput
+                  pincode={address.match(/\b\d{6}\b/)?.[0] || ""}
+                  onPincodeValidated={(v, local, cfg) => {
+                    setPincodeValidated(v.valid);
+                  }}
+                  disabled={isLoading}
+                />
               </div>
 
               <AddressHistory
@@ -646,19 +661,6 @@ export default function CheckoutPageContent() {
                 savedAddresses={savedAddresses}
                 selectedAddress={address}
               />
-
-              <button
-                type="button"
-                onClick={getDeliveryLocation}
-                disabled={isLoading}
-                className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-3.5 flex items-center justify-center gap-2 text-sm font-semibold text-gray-500 hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-600 transition-all"
-              >
-                {isLoading ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Detecting...</>
-                ) : (
-                  <><Navigation className="w-4 h-4" /> Use my current location</>
-                )}
-              </button>
             </>
           )}
           {deliveryOption === "pickup" && (

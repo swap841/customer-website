@@ -3,7 +3,6 @@ importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-comp
 
 // NOTE: Firebase config values are public by design (identifiers, not secrets).
 // Security is enforced via Firebase Security Rules + App Check.
-// Update these to match your Firebase project's web app config.
 firebase.initializeApp({
   apiKey: "AIzaSyBqp4ioSFI1D97hdixZmRo_h7Z6wiu2SeA",
   authDomain: "my-store-51b02.firebaseapp.com",
@@ -21,6 +20,8 @@ messaging.onBackgroundMessage((payload) => {
     self.registration.showNotification(title, {
       body: body || "",
       icon: "/icon.png",
+      badge: "/icon.png",
+      tag: payload.data?.type === "otp_verification" ? "otp-verification" : undefined,
     });
   }
 });
@@ -28,9 +29,12 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const data = event.notification.data || {};
-  const url = data.type === "ticket_reply" || data.type === "new_ticket"
-    ? "/profile"
-    : "/";
+  let url = "/";
+  if (data.type === "otp_verification") {
+    url = "/checkout";
+  } else if (data.type === "ticket_reply" || data.type === "new_ticket") {
+    url = "/profile";
+  }
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
