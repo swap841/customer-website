@@ -135,7 +135,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── Top 3 Categories (Shop) ─── */}
+        {/* ─── Top 3 Categories (Shop by category) ─── */}
         <section className="mt-16">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-black text-gray-900">{contactInfo.categorySectionTitle || "Shop by category"}</h2>
@@ -146,10 +146,10 @@ export default function Home() {
               {contactInfo.categorySectionViewAll || "View all"} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
             {catsCountLoading
               ? Array(3).fill(0).map((_, i) => (
-                  <div key={i} className="h-40 rounded-[20px] bg-emerald-100/50 animate-pulse" />
+                  <div key={i} className="aspect-square rounded-[20px] bg-emerald-100/50 animate-pulse" />
                 ))
               : (categoriesWithCount ?? [])
                   .filter((c) => c.productCount > 0)
@@ -157,19 +157,30 @@ export default function Home() {
                   .slice(0, 3)
                   .map((category) => {
                     const displayName = category.displayName || (category.name.charAt(0).toUpperCase() + category.name.slice(1));
+                    const placeholderImages: Record<string, string> = {
+                      "Fruits & Vegetables": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
+                      "Dairy, Bread & Eggs": "https://images.unsplash.com/photo-1528750901443-e9c17cc9f60a?w=400&h=400&fit=crop",
+                      "Snacks & Munchies": "https://images.unsplash.com/photo-1599490659273-e3b69007f4bc?w=400&h=400&fit=crop",
+                      "Atta, Rice & Dals": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+                      "Beverages": "https://images.unsplash.com/photo-1527960656366-ee2a69d53148?w=400&h=400&fit=crop",
+                      "vegetables": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
+                      "fruits": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
+                      "pulses": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+                    };
+                    const imgSrc = category.imageUrl || placeholderImages[category.name] || placeholderImages[displayName] || "";
                     return (
                       <Link
                         key={category.id}
                         href={`/products?category=${encodeURIComponent(category.id)}`}
                         className="group relative overflow-hidden rounded-[20px] border border-emerald-100/60 bg-white shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300"
                       >
-                        <div className="relative h-40 bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden">
-                          {category.imageUrl ? (
+                        <div className="aspect-square bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden relative">
+                          {imgSrc ? (
                             <Image
-                              src={category.imageUrl}
+                              src={imgSrc}
                               alt={displayName}
                               fill
-                              sizes="(max-width: 640px) 100vw, 33vw"
+                              sizes="(max-width: 640px) 50vw, 33vw"
                               className="object-cover transition duration-500 group-hover:scale-105"
                             />
                           ) : (
@@ -187,47 +198,6 @@ export default function Home() {
                       </Link>
                     );
                   })}
-          </div>
-        </section>
-
-        {/* ─── Explore Categories (All) ─── */}
-        <section className="mt-14">
-          <h2 className="text-lg font-black text-gray-900 mb-5">Explore Categories</h2>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-            {catsCountLoading
-              ? Array(8).fill(0).map((_, i) => (
-                  <div key={i} className="shrink-0 w-36 h-44 rounded-[20px] bg-emerald-100/50 animate-pulse" />
-                ))
-              : (categoriesWithCount ?? []).map((category) => {
-                  const displayName = category.displayName || (category.name.charAt(0).toUpperCase() + category.name.slice(1));
-                  return (
-                    <Link
-                      key={category.id}
-                      href={`/products?category=${encodeURIComponent(category.id)}`}
-                      className="shrink-0 w-36 rounded-[20px] border border-emerald-100/60 bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden group"
-                    >
-                      <div className="relative h-28 bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden">
-                        {category.imageUrl ? (
-                          <Image
-                            src={category.imageUrl}
-                            alt={displayName}
-                            fill
-                            sizes="144px"
-                            className="object-cover transition duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl font-black text-emerald-200">
-                            {displayName.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-3 text-center">
-                        <p className="text-sm font-bold text-gray-900 truncate">{displayName}</p>
-                        <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">{category.productCount} products</p>
-                      </div>
-                    </Link>
-                  );
-                })}
           </div>
         </section>
 

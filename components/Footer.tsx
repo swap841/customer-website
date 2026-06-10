@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -10,32 +10,38 @@ import {
   Facebook,
   Instagram,
 } from "lucide-react";
+import { useContactInfo } from "@/hooks/useContactInfo";
+import { useCategoriesWithCount } from "@/hooks/useCategoriesWithCount";
 
-const footerLinks = {
-  shop: [
+export default function Footer() {
+  const { contactInfo } = useContactInfo();
+  const { data: categoriesWithCount } = useCategoriesWithCount();
+
+  const topCategories = (categoriesWithCount ?? [])
+    .filter((c) => c.productCount > 0)
+    .sort((a, b) => b.productCount - a.productCount)
+    .slice(0, 4);
+
+  const shopLinks = [
     { label: "All Products", href: "/products" },
-    { label: "Fruits & Vegetables", href: "/products?category=fruits-vegetables" },
-    { label: "Dairy & Eggs", href: "/products?category=dairy" },
-    { label: "Spices & Masala", href: "/products?category=spices" },
-  ],
-  company: [
+    ...topCategories.map((c) => ({
+      label: c.displayName || c.name,
+      href: `/products?category=${encodeURIComponent(c.id)}`,
+    })),
+  ];
+
+  const companyLinks = [
     { label: "About Us", href: "/about" },
     { label: "Contact Us", href: "/contact" },
-    { label: "Careers", href: "/contact" },
-  ],
-  legal: [
+  ];
+
+  const legalLinks = [
     { label: "Privacy Policy", href: "/policies/privacy" },
     { label: "Terms & Conditions", href: "/policies/terms" },
     { label: "Refund Policy", href: "/policies/refund" },
     { label: "Shipping Policy", href: "/policies/shipping" },
     { label: "Contact Us", href: "/policies/contact" },
-  ],
-};
-
-import { useContactInfo } from "@/hooks/useContactInfo";
-
-export default function Footer() {
-  const { contactInfo } = useContactInfo();
+  ];
 
   return (
     <footer className="bg-zinc-900 text-zinc-300 print:hidden">
@@ -103,13 +109,13 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Shop Links */}
+          {/* Shop Links — Dynamic from Firestore */}
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-white mb-4">
               {contactInfo.footerShopTitle || "Shop"}
             </h3>
             <ul className="space-y-2.5">
-              {footerLinks.shop.map((link) => (
+              {shopLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
@@ -128,7 +134,7 @@ export default function Footer() {
               {contactInfo.footerCompanyTitle || "Company"}
             </h3>
             <ul className="space-y-2.5">
-              {footerLinks.company.map((link) => (
+              {companyLinks.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
@@ -147,7 +153,7 @@ export default function Footer() {
               {contactInfo.footerLegalTitle || "Legal"}
             </h3>
             <ul className="space-y-2.5">
-              {footerLinks.legal.map((link) => (
+              {legalLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
