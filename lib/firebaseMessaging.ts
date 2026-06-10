@@ -59,48 +59,56 @@ export async function requestFcmToken(uid: string): Promise<string | null> {
   }
 }
 
-export async function sendCheckoutOTP(phoneNumber: string, userId: string): Promise<{ success: boolean; error?: string; code?: string }> {
+async function apiPost(path: string, body: Record<string, unknown>): Promise<{ success: boolean; error?: string; code?: string; status?: number }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
   try {
-    const response = await fetch(`${SERVER_URL}/api/auth/send-otp-fcm`, {
+    const response = await fetch(`${SERVER_URL}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phoneNumber, userId }),
+      body: JSON.stringify(body),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     const data = await response.json();
-    if (!data.success && data.error) {
-      // Map server error codes to user-friendly messages
-      const messages: Record<string, string> = {
-        NO_FCM_TOKEN: "Please allow browser notifications first. Click the lock icon in your address bar → Allow notifications, then try again.",
-        FCM_FAILED: "Could not send notification. Please check browser notification settings and try again.",
-      };
-      data.error = messages[data.code] || data.error;
-    }
+    data.status = response.status;
     return data;
-  } catch {
-    return { success: false, error: "Cannot reach server. Please check your internet connection." };
+  } catch (err: any) {
+    clearTimeout(timer);
+    if (err?.name === "AbortError") {
+      return { success: false, error: "Server took too long to respond. It may be starting up — try again in 30 seconds.", code: "TIMEOUT" };
+    }
+    return { success: false, error: `Cannot reach server (${SERVER_URL}). It may be waking up — try again in 30 seconds.`, code: "NETWORK_ERROR" };
   }
 }
 
-export async function verifyCheckoutOTP(phoneNumber: string, otp: string, userId: string): Promise<{ success: boolean; error?: string; code?: string }> {
-  try {
-    const response = await fetch(`${SERVER_URL}/api/auth/verify-otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phoneNumber, otp, userId }),
-    });
-    const data = await response.json();
-    if (!data.success && data.error) {
-      const messages: Record<string, string> = {
-        OTP_NOT_FOUND: "OTP expired or not found. Please request a new OTP.",
-        OTP_EXPIRED: "OTP expired. Please request a new OTP.",
-        OTP_INCORRECT: data.error, // Keep server message (includes attempts remaining)
-        MAX_ATTEMPTS: "Too many wrong attempts. Please request a new OTP.",
-        USER_MISMATCH: "OTP was sent to a different account.",
-      };
-      data.error = messages[data.code] || data.error;
-    }
-    return data;
-  } catch {
-    return { success: false, error: "Cannot reach server. Please check your internet connection." };
+export async function sendCheckoutOTP(phoneNumber: string, userId: string): Promise<{ success: boolean; error?: string; code?: string }> {
+  const data = await apiPost("/api/auth/send-otp-fcm", { phoneNumber, userId });
+  if (!data.success && data.error) {
+    const messages: Record<string, string> = {
+      NO_FCM_TOKEN: "Notifications not enabled. Please allow browser notifications (click the lock/site-info icon in your address bar), then try again.",
+      FCM_FAILED: "Could not send notification. Check browser notification settings and try again.",
+      TIMEOUT: data.error,
+      NETWORK_ERROR: data.error,
+    };
+    data.error = messages[data.code!] || data.error;
   }
+  return data;
+}
+
+export async function verifyCheckoutOTP(phoneNumber: string, otp: string, userId: string): Promise<{ success: boolean; error?: string; code?: string }> {
+  const data = await apiPost("/api/auth/verify-otp", { phoneNumber, otp, userId });
+  if (!data.success && data.error) {
+    const messages: Record<string, string> = {
+      OTP_NOT_FOUND: "OTP expired or not found. Please request a new OTP.",
+      OTP_EXPIRED: "OTP expired. Please request a new OTP.",
+      OTP_INCORRECT: data.error,
+      MAX_ATTEMPTS: "Too many wrong attempts. Please request a new OTP.",
+      USER_MISMATCH: "OTP was sent to a different account.",
+      TIMEOUT: data.error,
+      NETWORK_ERROR: data.error,
+    };
+    data.error = messages[data.code!] || data.error;
+  }
+  return data;
 }
