@@ -137,19 +137,13 @@ export default function Home() {
 
         {/* ─── Top 3 Categories (Shop by category) ─── */}
         <section className="mt-16">
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-black text-gray-900">{contactInfo.categorySectionTitle || "Shop by category"}</h2>
-            <Link
-              href="/products"
-              className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"
-            >
-              {contactInfo.categorySectionViewAll || "View all"} <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
           </div>
-          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-3">
             {catsCountLoading
               ? Array(3).fill(0).map((_, i) => (
-                  <div key={i} className="aspect-square rounded-[20px] bg-emerald-100/50 animate-pulse" />
+                  <div key={i} className="aspect-[4/3] rounded-2xl bg-emerald-100/50 animate-pulse" />
                 ))
               : (categoriesWithCount ?? [])
                   .filter((c) => c.productCount > 0)
@@ -158,46 +152,98 @@ export default function Home() {
                   .map((category) => {
                     const displayName = category.displayName || (category.name.charAt(0).toUpperCase() + category.name.slice(1));
                     const placeholderImages: Record<string, string> = {
-                      "Fruits & Vegetables": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
-                      "Dairy, Bread & Eggs": "https://images.unsplash.com/photo-1528750901443-e9c17cc9f60a?w=400&h=400&fit=crop",
-                      "Snacks & Munchies": "https://images.unsplash.com/photo-1599490659273-e3b69007f4bc?w=400&h=400&fit=crop",
-                      "Atta, Rice & Dals": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
-                      "Beverages": "https://images.unsplash.com/photo-1527960656366-ee2a69d53148?w=400&h=400&fit=crop",
-                      "vegetables": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
-                      "fruits": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
-                      "pulses": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+                      "vegetables": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
+                      "fruits": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
+                      "pulses": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop",
+                      "Fruits & Vegetables": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
+                      "Dairy, Bread & Eggs": "https://images.unsplash.com/photo-1528750901443-e9c17cc9f60a?w=400&h=300&fit=crop",
+                      "Snacks & Munchies": "https://images.unsplash.com/photo-1599490659273-e3b69007f4bc?w=400&h=300&fit=crop",
+                      "Atta, Rice & Dals": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop",
+                      "Beverages": "https://images.unsplash.com/photo-1527960656366-ee2a69d53148?w=400&h=300&fit=crop",
                     };
                     const imgSrc = category.imageUrl || placeholderImages[category.name] || placeholderImages[displayName] || "";
                     return (
                       <Link
                         key={category.id}
                         href={`/products?category=${encodeURIComponent(category.id)}`}
-                        className="group relative overflow-hidden rounded-[20px] border border-emerald-100/60 bg-white shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300"
+                        className="group overflow-hidden rounded-2xl border border-emerald-100/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300"
                       >
-                        <div className="aspect-square bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden relative">
+                        <div className="aspect-[4/3] bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden relative">
                           {imgSrc ? (
                             <Image
                               src={imgSrc}
                               alt={displayName}
                               fill
-                              sizes="(max-width: 640px) 50vw, 33vw"
+                              sizes="(max-width: 640px) 33vw, 33vw"
                               className="object-cover transition duration-500 group-hover:scale-105"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-5xl font-black text-emerald-200">
+                            <div className="w-full h-full flex items-center justify-center text-3xl font-black text-emerald-200">
                               {displayName.charAt(0)}
                             </div>
                           )}
-                          <div className="absolute top-3 right-3 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
+                          <div className="absolute top-2 right-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-md">
                             {category.productCount} items
                           </div>
                         </div>
-                        <div className="p-4">
-                          <h3 className="text-base font-bold text-gray-900">{displayName}</h3>
+                        <div className="px-3 py-2">
+                          <h3 className="text-xs font-bold text-gray-900 truncate">{displayName}</h3>
                         </div>
                       </Link>
                     );
                   })}
+          </div>
+        </section>
+
+        {/* ─── Explore Categories (All) ─── */}
+        <section className="mt-10">
+          <h2 className="text-lg font-black text-gray-900 mb-4">Explore Categories</h2>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+            {catsCountLoading
+              ? Array(6).fill(0).map((_, i) => (
+                  <div key={i} className="aspect-[4/3] rounded-2xl bg-emerald-100/50 animate-pulse" />
+                ))
+              : (categoriesWithCount ?? []).map((category) => {
+                  const displayName = category.displayName || (category.name.charAt(0).toUpperCase() + category.name.slice(1));
+                  const placeholderImages: Record<string, string> = {
+                    "vegetables": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
+                    "fruits": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
+                    "pulses": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop",
+                    "Fruits & Vegetables": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
+                    "Dairy, Bread & Eggs": "https://images.unsplash.com/photo-1528750901443-e9c17cc9f60a?w=400&h=300&fit=crop",
+                    "Snacks & Munchies": "https://images.unsplash.com/photo-1599490659273-e3b69007f4bc?w=400&h=300&fit=crop",
+                    "Atta, Rice & Dals": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop",
+                    "Beverages": "https://images.unsplash.com/photo-1527960656366-ee2a69d53148?w=400&h=300&fit=crop",
+                  };
+                  const imgSrc = category.imageUrl || placeholderImages[category.name] || placeholderImages[displayName] || "";
+                  return (
+                    <Link
+                      key={category.id}
+                      href={`/products?category=${encodeURIComponent(category.id)}`}
+                      className="group overflow-hidden rounded-2xl border border-emerald-100/60 bg-white shadow-sm hover:shadow-md transition-all duration-300"
+                    >
+                      <div className="aspect-[4/3] bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden relative">
+                        {imgSrc ? (
+                          <Image
+                            src={imgSrc}
+                            alt={displayName}
+                            fill
+                            sizes="(max-width: 640px) 33vw, 25vw"
+                            className="object-cover transition duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-2xl font-black text-emerald-200">
+                            {displayName.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-2.5 py-2 text-center">
+                        <p className="text-[11px] font-bold text-gray-900 truncate">{displayName}</p>
+                        <p className="text-[9px] text-emerald-600 font-semibold">{category.productCount} products</p>
+                      </div>
+                    </Link>
+                  );
+                })}
           </div>
         </section>
 
