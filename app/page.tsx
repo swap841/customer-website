@@ -136,12 +136,12 @@ export default function Home() {
         </section>
 
         {/* ─── Top 3 Categories (Shop by category) ─── */}
-        <section className="mt-12">
-          <h2 className="text-base font-black text-gray-900 mb-3">{contactInfo.categorySectionTitle || "Shop by category"}</h2>
-          <div className="grid grid-cols-3 gap-2.5">
+        <section className="mt-10">
+          <h2 className="text-sm font-bold text-gray-900 mb-2">{contactInfo.categorySectionTitle || "Shop by category"}</h2>
+          <div className="flex gap-3">
             {catsCountLoading
               ? Array(3).fill(0).map((_, i) => (
-                  <div key={i} className="aspect-[5/4] rounded-xl bg-emerald-100/50 animate-pulse" />
+                  <div key={i} className="w-16 h-16 rounded-lg bg-emerald-100/50 animate-pulse flex-shrink-0" />
                 ))
               : (categoriesWithCount ?? [])
                   .filter((c) => c.productCount > 0)
@@ -164,29 +164,24 @@ export default function Home() {
                       <Link
                         key={category.id}
                         href={`/products?category=${encodeURIComponent(category.id)}`}
-                        className="group overflow-hidden rounded-xl border border-emerald-100/60 bg-white shadow-sm hover:shadow-md transition-all duration-300"
+                        className="group flex flex-col items-center gap-1 flex-shrink-0"
                       >
-                        <div className="aspect-[5/4] bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden relative">
+                        <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden relative border border-emerald-100/60 shadow-sm group-hover:shadow-md transition-all duration-300">
                           {imgSrc ? (
                             <Image
                               src={imgSrc}
                               alt={displayName}
                               fill
-                              sizes="(max-width: 640px) 33vw, 33vw"
+                              sizes="64px"
                               className="object-cover transition duration-500 group-hover:scale-105"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-2xl font-black text-emerald-200">
+                            <div className="w-full h-full flex items-center justify-center text-lg font-black text-emerald-200">
                               {displayName.charAt(0)}
                             </div>
                           )}
-                          <div className="absolute top-1.5 right-1.5 bg-emerald-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-md">
-                            {category.productCount}
-                          </div>
                         </div>
-                        <div className="px-2 py-1.5">
-                          <h3 className="text-[11px] font-bold text-gray-900 truncate">{displayName}</h3>
-                        </div>
+                        <span className="text-[9px] font-semibold text-gray-700 text-center leading-tight max-w-16 truncate">{displayName}</span>
                       </Link>
                     );
                   })}
