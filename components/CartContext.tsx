@@ -133,10 +133,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const initialSyncDone = useRef(false);
   const unsubSnapshot = useRef<(() => void) | null>(null);
 
+  const CART_STORAGE_KEY = "grocery_cart";
+
   // Load from localStorage on mount
   useEffect(() => {
     setIsMounted(true);
-    const saved = localStorage.getItem("cart");
+    const saved = localStorage.getItem(CART_STORAGE_KEY);
     if (saved) {
       try {
         setCartItems(JSON.parse(saved));
@@ -147,7 +149,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   // Save to localStorage whenever cart changes
   useEffect(() => {
     if (isMounted) {
-      localStorage.setItem("cart", JSON.stringify(cartItems));
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
     }
   }, [cartItems, isMounted]);
 

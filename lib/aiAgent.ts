@@ -1,3 +1,5 @@
+import { getAppConfig } from "./appConfig";
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -8,6 +10,15 @@ export interface ChatMessage {
 const GEMINI_MODEL = "gemini-2.0-flash";
 const GEMINI_URL = (key: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
+
+async function getGeminiApiKey(): Promise<string | null> {
+  try {
+    const config = await getAppConfig();
+    return config.ai?.geminiApiKey || null;
+  } catch {
+    return null;
+  }
+}
 
 interface GeminiSystemContext {
   storeName: string;
@@ -52,17 +63,12 @@ RULES:
 - Use simple language - no technical jargon`;
 }
 
-let geminiKey = "";
-
-export function setGeminiApiKey(key: string) {
-  geminiKey = key;
-}
-
 export async function getGeminiResponse(
   input: string,
   ctx: Partial<GeminiSystemContext>,
   conversationHistory: { role: string; content: string }[]
 ): Promise<{ response: string; steps: string[] } | null> {
+  const geminiKey = await getGeminiApiKey();
   if (!geminiKey) return null;
 
   const defaultCtx: GeminiSystemContext = {

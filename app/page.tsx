@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 import Image from "next/image";
 import { useCategories } from "@/hooks/useCategories";
+import { useCategoriesWithCount } from "@/hooks/useCategoriesWithCount";
 import { useProducts } from "@/hooks/useProducts";
 import { useBanners } from "@/hooks/useBanners";
 import { useContactInfo } from "@/hooks/useContactInfo";
@@ -12,6 +13,7 @@ import { useContactInfo } from "@/hooks/useContactInfo";
 export default function Home() {
   const { contactInfo } = useContactInfo();
   const { data: categories, isLoading: catsLoading } = useCategories();
+  const { data: categoriesWithCount, isLoading: catsCountLoading } = useCategoriesWithCount();
   const { data: products, isLoading: prodsLoading } = useProducts(8);
   const { data: banners, isLoading: bannersLoading } = useBanners();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -130,7 +132,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── Category Chips (Horizontal Scroll) ─── */}
+        {/* ─── Top 3 Categories (Shop) ─── */}
         <section className="mt-16">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-black text-gray-900">{contactInfo.categorySectionTitle || "Shop by category"}</h2>
@@ -141,28 +143,88 @@ export default function Home() {
               {contactInfo.categorySectionViewAll || "View all"} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {catsCountLoading
+              ? Array(3).fill(0).map((_, i) => (
+                  <div key={i} className="h-40 rounded-[20px] bg-emerald-100/50 animate-pulse" />
+                ))
+              : (categoriesWithCount ?? [])
+                  .filter((c) => c.productCount > 0)
+                  .sort((a, b) => b.productCount - a.productCount)
+                  .slice(0, 3)
+                  .map((category) => {
+                    const displayName = category.displayName || (category.name.charAt(0).toUpperCase() + category.name.slice(1));
+                    return (
+                      <Link
+                        key={category.id}
+                        href={`/products?category=${encodeURIComponent(category.id)}`}
+                        className="group relative overflow-hidden rounded-[20px] border border-emerald-100/60 bg-white shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300"
+                      >
+                        <div className="relative h-40 bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden">
+                          {category.imageUrl ? (
+                            <Image
+                              src={category.imageUrl}
+                              alt={displayName}
+                              fill
+                              sizes="(max-width: 640px) 100vw, 33vw"
+                              className="object-cover transition duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-5xl font-black text-emerald-200">
+                              {displayName.charAt(0)}
+                            </div>
+                          )}
+                          <div className="absolute top-3 right-3 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
+                            {category.productCount} items
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h3 className="text-base font-bold text-gray-900">{displayName}</h3>
+                        </div>
+                      </Link>
+                    );
+                  })}
+          </div>
+        </section>
+
+        {/* ─── Explore Categories (All) ─── */}
+        <section className="mt-14">
+          <h2 className="text-lg font-black text-gray-900 mb-5">Explore Categories</h2>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-            {catsLoading ? (
-              Array(6).fill(0).map((_, i) => (
-                <div key={i} className="shrink-0 w-32 h-12 rounded-[20px] bg-emerald-100/50 animate-pulse" />
-              ))
-            ) : (
-              catList.map((category) => {
-                const displayName = category.displayName || (category.name.charAt(0).toUpperCase() + category.name.slice(1));
-                return (
-                  <Link
-                    key={category.id}
-                    href={`/products?category=${encodeURIComponent(category.id)}`}
-                    className="shrink-0 inline-flex items-center gap-2.5 rounded-[20px] border border-emerald-200/60 bg-white/80 backdrop-blur-sm px-5 py-2.5 text-sm font-bold text-emerald-800 shadow-sm hover:shadow-md hover:bg-emerald-50 hover:border-emerald-300 hover:-translate-y-0.5 transition-all duration-300"
-                  >
-                    <span className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-xs font-bold text-emerald-700">
-                      {displayName.charAt(0)}
-                    </span>
-                    {displayName}
-                  </Link>
-                );
-              })
-            )}
+            {catsCountLoading
+              ? Array(8).fill(0).map((_, i) => (
+                  <div key={i} className="shrink-0 w-36 h-44 rounded-[20px] bg-emerald-100/50 animate-pulse" />
+                ))
+              : (categoriesWithCount ?? []).map((category) => {
+                  const displayName = category.displayName || (category.name.charAt(0).toUpperCase() + category.name.slice(1));
+                  return (
+                    <Link
+                      key={category.id}
+                      href={`/products?category=${encodeURIComponent(category.id)}`}
+                      className="shrink-0 w-36 rounded-[20px] border border-emerald-100/60 bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden group"
+                    >
+                      <div className="relative h-28 bg-gradient-to-br from-emerald-50 to-teal-50 overflow-hidden">
+                        {category.imageUrl ? (
+                          <Image
+                            src={category.imageUrl}
+                            alt={displayName}
+                            fill
+                            sizes="144px"
+                            className="object-cover transition duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-3xl font-black text-emerald-200">
+                            {displayName.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3 text-center">
+                        <p className="text-sm font-bold text-gray-900 truncate">{displayName}</p>
+                        <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">{category.productCount} products</p>
+                      </div>
+                    </Link>
+                  );
+                })}
           </div>
         </section>
 

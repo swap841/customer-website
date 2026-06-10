@@ -45,6 +45,13 @@ export default function CategoryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-teal-50 pb-16 pt-24">
       <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+          <Link href="/" className="hover:text-emerald-600">Home</Link>
+          <span>/</span>
+          <Link href="/products" className="hover:text-emerald-600">Categories</Link>
+          <span>/</span>
+          <span className="text-gray-800 font-medium">{displayName}</span>
+        </nav>
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] items-start">
           <div>
             <div className="rounded-[32px] bg-white p-8 shadow-xl border border-emerald-100">

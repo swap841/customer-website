@@ -6,7 +6,7 @@ import { useCart } from "./CartContext";
 import { getAuth } from "firebase/auth";
 import { getAreaCode, getAreaCodeFromAddress } from "../utils/getAreaCode";
 import { getDistanceKm } from "@/utils/distance";
-import { doc, setDoc, collection, writeBatch, increment, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, collection, writeBatch, increment, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { validateCoupon } from "../utils/coupon";
 import TimeSlotPicker, { type TimeSlot } from "./TimeSlotPicker";
@@ -14,6 +14,7 @@ import LocationPicker from "./LocationPicker";
 import AddressVerification from "./AddressVerification";
 import DeliveryRadiusWarning from "./DeliveryRadiusWarning";
 import PermissionGate from "./PermissionGate";
+import PermissionDialog from "./PermissionDialog";
 import { toast } from "sonner";
 import type { DeliveryZoneInfo, PincodeValidation } from "@/lib/locationUtils";
 import {
@@ -34,6 +35,7 @@ import {
   Shield,
 } from "lucide-react";
 import { requestFcmToken, sendCheckoutOTP, verifyCheckoutOTP } from "@/lib/firebaseMessaging";
+import { calculateDeliveryTime, calculateDistance } from "@/lib/deliveryTimeUtils";
 
 import { useContactInfo } from "@/hooks/useContactInfo";
 import { useAddress } from "@/hooks/useAddress";
@@ -123,6 +125,7 @@ export default function CheckoutPageContent() {
   const [pincodeValidated, setPincodeValidated] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [showPermissionGate, setShowPermissionGate] = useState(false);
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false);
   const { savedAddress, saveAddress, clearAddress } = useAddress();
 
   const [otpStep, setOtpStep] = useState<"idle" | "sending" | "input" | "verifying" | "verified" | "failed">("idle");
@@ -484,6 +487,20 @@ export default function CheckoutPageContent() {
     if (!user) return;
 
     try {
+      for (const item of cartItems) {
+        const productRef = doc(db, "products", item.id);
+        const productSnap = await getDoc(productRef);
+        if (productSnap.exists()) {
+          const stock = productSnap.data().stock || 0;
+          if (stock < item.quantity) {
+            toast.error(`"${item.name}" only ${stock} left in stock. Please update your cart.`);
+            setIsSubmitting(false);
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
       await saveUserProfile();
 
       const orderItems = cartItems.map((item) => {
@@ -631,6 +648,13 @@ export default function CheckoutPageContent() {
       }
     }
 
+    // Check notification permission
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      setShowNotificationDialog(true);
+      setIsSubmitting(false);
+      return;
+    }
+
     if (!name || name.trim().length < 2) { toast.error("Please enter your full name"); return; }
     if (!phone) { toast.error("Please enter your phone number"); return; }
     if (!/^[6-9]\d{9}$/.test(phone.replace(/\D/g, ''))) { toast.error("Please enter a valid 10-digit phone number starting with 6-9"); return; }
@@ -772,6 +796,25 @@ export default function CheckoutPageContent() {
                   onClearAddress={clearAddress}
                 />
               )}
+
+              {location && distanceKm !== null && (
+                <div className="mt-3">
+                  {(() => {
+                    const storeLat = contactInfo.warehouseLat || STORE_LAT_DEFAULT;
+                    const storeLng = contactInfo.warehouseLng || STORE_LNG_DEFAULT;
+                    const dist = calculateDistance(storeLat, storeLng, location.lat, location.lng);
+                    const estimate = calculateDeliveryTime(dist, storeLat, storeLng);
+                    return estimate ? (
+                      <div className={`p-3 rounded-xl text-sm font-medium ${estimate.isOutOfRadius ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                        🚚 Estimated delivery: {estimate.display}
+                        {estimate.isOutOfRadius && (
+                          <p className="text-xs mt-1">This order will be dispatched via delivery partner.</p>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
             </>
           )}
           {deliveryOption === "pickup" && (
@@ -889,6 +932,25 @@ export default function CheckoutPageContent() {
         )}
       </button>
       {showPermissionGate && <PermissionGate onGranted={() => { setPermissionsGranted(true); setShowPermissionGate(false); }} />}
+
+      <PermissionDialog
+        isOpen={showNotificationDialog}
+        onClose={() => { setShowNotificationDialog(false); setIsSubmitting(false); }}
+        onConfirm={async () => {
+          const result = await Notification.requestPermission();
+          setShowNotificationDialog(false);
+          if (result === "granted") {
+            await requestFcmToken(user!.uid);
+          }
+          // Proceed with order regardless
+          setOtpStep("sending");
+        }}
+        title="Get Delivery Updates?"
+        message="We'll notify you when your order is confirmed, out for delivery, and delivered."
+        icon="notification"
+        confirmText="Enable Notifications"
+        cancelText="Skip"
+      />
 
       {otpStep !== "idle" && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, MessageCircle, ChevronDown, ChevronUp, Bot, Send, User, Loader2 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
-import { getAIResponse, getGeminiResponse, setGeminiApiKey, ChatMessage } from "@/lib/aiAgent";
+import { getAIResponse, getGeminiResponse, ChatMessage } from "@/lib/aiAgent";
 import { useAppConfig } from "@/hooks/useAppConfig";
 import { useContactInfo } from "@/hooks/useContactInfo";
 
@@ -37,12 +37,6 @@ export default function FaqPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing]);
-
-  useEffect(() => {
-    if (appConfig?.ai?.geminiApiKey) {
-      setGeminiApiKey(appConfig.ai.geminiApiKey);
-    }
-  }, [appConfig]);
 
   const filtered = faqs.filter(
     (f) =>

@@ -98,6 +98,8 @@ export default function ProductCard({ product }: ProductCardProps) {
               width={400}
               height={400}
               className="product-image"
+              placeholder="blur"
+              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAyACgDASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAUGBAf/xAAoEAABAwMDBAICAwAAAAAAAAABAgMEAAURBhIhMUFRYROhFCIycYH/xAAYAQADAQEAAAAAAAAAAAAAAAABAgMABP/EABsRAQEAAgMBAAAAAAAAAAAAAAEAAhEDITES/9oADAMBAAIRAxEAPwD0yCw4/mREYVHhsuF1ybIRlCEdgOik9hVq3t2d+0h6PcXnX3nT1U4tWVKJ6kmpVnbNz1lAtjqilhDnmutJxkD0Pet6hCEIDaEhKUjAAHAAqksjOZn2zFt7dqt7Vxt7a1qeQ42sJUkjuKzFt0hY7RLVKt1uZjvqSUFxIJJSeo5q3RWA//9k="
             />
           ) : (
             <div className="w-full h-48 flex items-center justify-center text-slate-400 bg-slate-50">No Image</div>

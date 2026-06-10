@@ -5,7 +5,7 @@ import { Bot, X, Send, MessageCircle, Loader2, User } from "lucide-react";
 import { collection, addDoc, Timestamp, arrayUnion, doc, updateDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { db } from "@/lib/firebaseClient";
-import { getAIResponse, getGeminiResponse, setGeminiApiKey } from "@/lib/aiAgent";
+import { getAIResponse, getGeminiResponse } from "@/lib/aiAgent";
 import { useAppConfig } from "@/hooks/useAppConfig";
 import { useContactInfo } from "@/hooks/useContactInfo";
 import { formatMarkdown } from "@/lib/markdownUtils";
@@ -25,12 +25,6 @@ export default function ChatBot() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  useEffect(() => {
-    if (appConfig?.ai?.geminiApiKey) {
-      setGeminiApiKey(appConfig.ai.geminiApiKey);
-    }
-  }, [appConfig]);
 
   const handleSend = async () => {
     const text = input.trim();
