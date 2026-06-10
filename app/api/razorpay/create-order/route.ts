@@ -4,7 +4,7 @@ import { createRazorpayOrder } from "@/lib/firestoreAdmin";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = requireAuthHeader(req);
+    const auth = await requireAuthHeader(req);
     if (auth instanceof Response) return auth;
 
     const { amount, receipt } = await req.json();

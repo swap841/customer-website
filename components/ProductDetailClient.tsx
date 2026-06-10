@@ -162,8 +162,9 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
       toast.error("Sign in to add to wishlist");
       return;
     }
+    const wasInWishlist = isWishlisted(productId);
     await toggleWishlist(productId);
-    toast.success(isWishlisted(productId) ? "Removed from wishlist" : "Added to wishlist");
+    toast.success(wasInWishlist ? "Removed from wishlist" : "Added to wishlist");
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {

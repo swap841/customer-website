@@ -154,12 +154,21 @@ export default function OrderTrackingPage() {
   const isAwaitingVerification = currentStatus === "Awaiting Verification";
   const currentStepIndex = STATUS_ORDER.indexOf(currentStatus);
 
-  const formatDate = (d: string) => {
+  const formatDate = (d: any) => {
     if (!d) return "N/A";
-    return new Date(d).toLocaleDateString("en-IN", {
-      day: "numeric", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    });
+    try {
+      if (typeof d === "object" && typeof d.toDate === "function") {
+        return d.toDate().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      }
+      if (typeof d === "object" && d.seconds) {
+        return new Date(d.seconds * 1000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      }
+      const date = new Date(d);
+      if (isNaN(date.getTime())) return "N/A";
+      return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return "N/A";
+    }
   };
 
   return (

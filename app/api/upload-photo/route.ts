@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthHeader } from "@/lib/authHelper";
+import { getDocument } from "@/lib/firestoreAdmin";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = requireAuthHeader(req);
+    const auth = await requireAuthHeader(req);
     if (auth instanceof Response) return auth;
 
-    const apiKey = process.env.IMGBB_API_KEY;
+    const configDoc = await getDocument("appConfig", "settings");
+    const apiKey = configDoc?.imgbbApiKey || process.env.IMGBB_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ success: false, error: "ImgBB API key not configured" }, { status: 500 });
     }
@@ -25,6 +27,10 @@ export async function POST(req: NextRequest) {
 
     if (!image.type.startsWith("image/")) {
       return NextResponse.json({ success: false, error: "Invalid file type" }, { status: 400 });
+    }
+
+    if (image.type === "image/svg+xml") {
+      return NextResponse.json({ success: false, error: "SVG files are not allowed for security reasons" }, { status: 400 });
     }
 
     const proxyFormData = new FormData();

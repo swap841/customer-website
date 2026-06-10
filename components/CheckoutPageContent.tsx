@@ -72,6 +72,9 @@ interface RazorpayInstance {
 
   const EXPRESS_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://grocery-server-u2qq.onrender.com';
 
+  let razorpayScriptLoaded = false;
+  let razorpayScriptFailed = false;
+
 export default function CheckoutPageContent() {
   const router = useRouter();
   const auth = getAuth();
@@ -154,6 +157,14 @@ export default function CheckoutPageContent() {
       document.documentElement.style.overflow = "";
     }
   }, [isLoading]);
+
+  useEffect(() => {
+    if (couponDiscount > 0) {
+      setCouponDiscount(0);
+      setCouponCode("");
+      setCouponMessage(null);
+    }
+  }, [deliveryOption, cartItems]);
 
   const checkDistance = useCallback((lat: number, lng: number) => {
     const dist = getDistanceKm(STORE_LAT, STORE_LNG, lat, lng);
@@ -259,10 +270,13 @@ export default function CheckoutPageContent() {
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
       if (typeof window !== "undefined" && window.Razorpay) { resolve(true); return; }
+      if (razorpayScriptFailed) { resolve(false); return; }
+      if (razorpayScriptLoaded) { resolve(false); return; }
+      razorpayScriptLoaded = true;
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
+      script.onerror = () => { razorpayScriptFailed = true; resolve(false); };
       document.body.appendChild(script);
     });
   };
@@ -417,6 +431,7 @@ export default function CheckoutPageContent() {
     }
     if (!user) { toast.error("Please login to place an order"); return; }
     if (cartItems.length === 0) { toast.error("Your cart is empty"); return; }
+    if (finalTotal <= 0) { toast.error("Total must be greater than zero"); return; }
 
     setIsSubmitting(true);
     setIsLoading(true);
@@ -456,6 +471,7 @@ export default function CheckoutPageContent() {
       const estimatedDeliveryDate = new Date(nowDate.getTime() + (preparationHours + deliveryHours) * 60 * 60 * 1000);
 
       const payMethod = paymentMethod === "Online" ? "razorpay" : "cod";
+      const cityFromAddress = deliveryOption === "delivery" ? (address.split(",").slice(-2, -1)[0]?.trim().replace(/\d{6}/, "").trim() || "") : "Store Pickup";
       const orderData: Record<string, unknown> = {
         userId: user.uid,
         userName: name || user.displayName || "",
@@ -466,7 +482,8 @@ export default function CheckoutPageContent() {
           name, phone,
           addressLine: deliveryOption === "delivery" ? address : "Store Pickup",
           pincode: deliveryOption === "delivery" ? (address.match(/\b\d{6}\b/)?.[0] || areaCode) : "000000",
-          city: deliveryOption === "delivery" ? "" : "Store Pickup",
+          city: cityFromAddress,
+          state: deliveryOption === "delivery" ? "Maharashtra" : "",
           lat: location?.lat || null, lng: location?.lng || null,
         },
         deliveryLocation: deliveryOption === "delivery" && location ? {

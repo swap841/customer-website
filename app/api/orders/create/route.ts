@@ -5,7 +5,7 @@ import type { WriteOp } from "@/lib/firestoreAdmin";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = requireAuthHeader(req);
+    const auth = await requireAuthHeader(req);
     if (auth instanceof Response) return auth;
 
     const { userId, orderData, couponCode } = await req.json();

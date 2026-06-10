@@ -3,8 +3,8 @@ import { requireAuthHeader, SERVER_URL } from "@/lib/authHelper";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = requireAuthHeader(req);
-    if (auth instanceof Response) return auth;
+    const auth = await requireAuthHeader(req);
+    if (auth instanceof Response) return auth as NextResponse;
 
     const body = await req.json();
     const res = await fetch(`${SERVER_URL}/api/orders/cancel`, {

@@ -99,21 +99,14 @@ export default function ProductsPage() {
       try {
         snap = await getDocs(q);
       } catch {
-        // Fallback without orderBy if composite index is missing
-        let fallbackQ = query(
+        // Fallback without orderBy — no cursor possible without orderBy
+        const fallbackQ = query(
           collection(db, "products"),
           where("active", "==", true),
           limit(PAGE_SIZE + 1)
         );
-        if (!isInitial && lastDoc) {
-          fallbackQ = query(
-            collection(db, "products"),
-            where("active", "==", true),
-            startAfter(lastDoc),
-            limit(PAGE_SIZE + 1)
-          );
-        }
         snap = await getDocs(fallbackQ);
+        setLastDoc(null);
       }
       const docs = snap.docs;
       const hasMoreData = docs.length > PAGE_SIZE;

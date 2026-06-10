@@ -17,6 +17,7 @@ import {
   setDoc,
   updateDoc,
   arrayUnion,
+  serverTimestamp,
   Timestamp,
   where,
 } from "firebase/firestore";
@@ -243,8 +244,8 @@ export default function ProfilePage() {
         items: order.items,
         totalAmount: order.totalAmount,
         status: "Pending",
-        date: Timestamp.now(),
-        createdAt: Timestamp.now(),
+        date: serverTimestamp(),
+        createdAt: serverTimestamp(),
         deliveryAddress: customerData.address || "",
         phone: customerData.phone || "",
         payment: { method: "cod", status: "pending" },
@@ -474,7 +475,7 @@ export default function ProfilePage() {
             value={customerData.phone || ""}
             onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
             className="w-full px-3.5 py-2.5 border border-zinc-200 bg-zinc-50 text-sm font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all"
-            placeholder="Phone number"
+            placeholder="10-digit mobile number"
           />
         </div>
         <div className="w-full mb-4">

@@ -80,8 +80,9 @@ export default function ProductCard({ product }: ProductCardProps) {
       toast.error("Sign in to add to wishlist");
       return;
     }
+    const wasInWishlist = isWishlisted(product.id);
     await toggleWishlist(product.id);
-    toast.success(isWishlisted(product.id) ? "Removed from wishlist" : "Added to wishlist");
+    toast.success(wasInWishlist ? "Removed from wishlist" : "Added to wishlist");
   };
 
   const outOfStock = product.stock !== undefined && product.stock <= 0;
