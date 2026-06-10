@@ -144,8 +144,8 @@ export function useAddresses() {
           usedAt: serverTimestamp(),
         });
       }
-    } catch (error) {
-      console.error("Error saving address:", error);
+    } catch {
+      // Address save error handled silently
     }
   };
 
@@ -153,8 +153,8 @@ export function useAddresses() {
     if (!uid) return;
     try {
       await deleteDoc(doc(db, "users", uid, "addresses", id));
-    } catch (error) {
-      console.error("Error deleting address:", error);
+    } catch {
+      // Address delete error handled silently
     }
   };
 

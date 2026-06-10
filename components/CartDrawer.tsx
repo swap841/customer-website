@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { X, Percent, Minus, Plus, Trash2 } from "lucide-react";
 import { getAuth, User, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/firebaseConfig";
+import { useContactInfo } from "@/hooks/useContactInfo";
 
 const auth = getAuth(app);
 
@@ -30,6 +31,8 @@ const CartDrawer: React.FC = () => {
     couponMessage,
     couponLoading,
   } = useCart();
+  const { contactInfo } = useContactInfo();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,7 +91,7 @@ const CartDrawer: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium truncate">{item.name}</h3>
-                      <p className="text-green-600 font-semibold text-sm sm:text-base mt-0.5">₹{item.price}</p>
+                      <p className="text-green-600 font-semibold text-sm sm:text-base mt-0.5">{symbol}{item.price}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-7 h-7 sm:w-8 sm:h-8 border border-gray-200 rounded-full text-sm hover:bg-emerald-50 hover:border-emerald-300 transition-colors font-bold"><Minus size={14} /></button>
                         <span className="w-6 text-center text-sm">{item.quantity}</span>
@@ -126,20 +129,20 @@ const CartDrawer: React.FC = () => {
               <div className="mt-6">
                 <h3 className="font-bold text-lg mb-4 text-zinc-800">Bill details</h3>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span>Items total</span><span>₹{subtotal}</span></div>
+                  <div className="flex justify-between"><span>Items total</span><span>{symbol}{subtotal}</span></div>
                   <div className="flex justify-between">
                     <span>Delivery charge</span>
                     {deliveryCharge === 0 ? (
-                      <span className="flex gap-2"><span className="line-through text-gray-400">₹{deliveryChargeConfig > 0 ? deliveryChargeConfig : 25}</span><span className="text-blue-600 font-semibold">FREE</span></span>
-                    ) : <span>₹{deliveryCharge}</span>}
+                      <span className="flex gap-2"><span className="line-through text-gray-400">{symbol}{deliveryChargeConfig > 0 ? deliveryChargeConfig : 25}</span><span className="text-blue-600 font-semibold">FREE</span></span>
+                    ) : <span>{symbol}{deliveryCharge}</span>}
                   </div>
-                  <div className="flex justify-between"><span>Tax</span><span>₹{taxAmount}</span></div>
+                  <div className="flex justify-between"><span>Tax</span><span>{symbol}{taxAmount}</span></div>
                   {couponDiscount > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-semibold"><span>Coupon discount</span><span>-₹{couponDiscount}</span></div>
+                    <div className="flex justify-between text-emerald-600 font-semibold"><span>Coupon discount</span><span>-{symbol}{couponDiscount}</span></div>
                   )}
                   <div className="flex justify-between font-bold text-lg pt-4 border-t mt-4">
                     <span>Grand total</span>
-                    <span className="text-emerald-600">₹{grandTotal}</span>
+                    <span className="text-emerald-600">{symbol}{grandTotal}</span>
                   </div>
                 </div>
               </div>
@@ -153,7 +156,7 @@ const CartDrawer: React.FC = () => {
               <div className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold text-center">Checking sign-in...</div>
             ) : user ? (
               <button onClick={handleCheckout} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-bold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-md">
-                PROCEED TO CHECKOUT — ₹{grandTotal}
+                PROCEED TO CHECKOUT — {symbol}{grandTotal}
               </button>
             ) : (
               <div className="space-y-4">

@@ -99,8 +99,8 @@ export default function ProfilePage() {
           name: displayName || "",
         }));
       }
-    } catch (err) {
-      console.error("Error fetching customer data:", err);
+    } catch {
+      // Error handled silently
     }
   };
 
@@ -170,8 +170,8 @@ export default function ProfilePage() {
           };
 
           orders.push(order);
-        } catch (error) {
-          console.error(`Error processing order ${doc.id}:`, error);
+        } catch {
+          // Skip malformed order
         }
       });
 
@@ -198,8 +198,7 @@ export default function ProfilePage() {
       setCurrentOrders(current);
       setPastOrders(past);
       setLoading(false);
-    }, (error) => {
-      console.error("Error fetching orders:", error);
+    }, () => {
       toast.error("Failed to load orders. Please try again.");
       setLoading(false);
     });
@@ -219,8 +218,7 @@ export default function ProfilePage() {
       const docRef = doc(db, "users", user.uid);
       await setDoc(docRef, customerData, { merge: true });
       toast.success("Profile updated successfully!");
-    } catch (err) {
-      console.error("Error updating profile:", err);
+    } catch {
       toast.error("Failed to update profile");
     }
   };
@@ -249,8 +247,8 @@ export default function ProfilePage() {
         payment: { method: "cod", status: "pending" },
       });
       toast.success("Order placed again!");
-    } catch (err) {
-      console.error("Error reordering:", err);
+    } catch {
+      // Reorder error handled by UI
     }
   };
 
@@ -287,8 +285,7 @@ export default function ProfilePage() {
       // Store ticketContactId in order doc
       await setDoc(doc(db, "users", user.uid, "orders", order.id), { ticketContactId: docRef.id }, { merge: true });
       toast.success("Query submitted! Check your order page for updates.");
-    } catch (err) {
-      console.error("Error raising query:", err);
+    } catch {
       toast.error("Failed to submit query.");
     }
     setOpenMenuIndex(null);
@@ -381,7 +378,7 @@ export default function ProfilePage() {
         setContacts(list);
       },
       (err) => {
-        console.error("Error fetching contacts:", err);
+        // Contacts listener error handled silently
       }
     );
     return () => unsub();
@@ -401,8 +398,7 @@ export default function ProfilePage() {
       });
       setReplyText("");
       toast.success("Reply sent!");
-    } catch (err) {
-      console.error("Error sending reply:", err);
+    } catch {
       toast.error("Failed to send reply");
     }
     setSendingReply(false);
@@ -446,16 +442,15 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Full Name Input */}
+        {/* Full Name Display (read-only) */}
         <h1 className="text-2xl font-black bg-gradient-to-r from-emerald-700 to-teal-600 bg-clip-text text-transparent mb-2">{customerData.name}</h1>
         <div className="w-full mb-2">
           <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Full Name</label>
           <input
             type="text"
             value={customerData.name || ""}
-            onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
-            className="w-full px-3.5 py-2.5 border border-zinc-200 bg-zinc-50 text-sm font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all"
-            placeholder="Your Full Name"
+            disabled
+            className="w-full px-3.5 py-2.5 border border-zinc-200 bg-zinc-100 text-sm font-semibold rounded-xl cursor-not-allowed text-zinc-500"
           />
         </div>
 

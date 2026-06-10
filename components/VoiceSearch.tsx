@@ -1,27 +1,48 @@
 'use client';
 
 import { Mic } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface SpeechRecognitionInstance {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: (event: { results: Array<Array<{ transcript: string }>> }) => void;
+  onerror: () => void;
+  start: () => void;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognitionInstance;
+    webkitSpeechRecognition: new () => SpeechRecognitionInstance;
+  }
+}
 
 export function VoiceSearch({ onResult }: { onResult: (text: string) => void }) {
   const startVoiceSearch = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Voice search not supported in this browser');
+      toast.error('Voice search is not supported in this browser');
       return;
     }
 
-    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognitionAPI = (window as { SpeechRecognition?: new () => SpeechRecognitionInstance; webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).SpeechRecognition || (window as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
+      toast.error('Voice search is not supported in this browser');
+      return;
+    }
     const recognition = new SpeechRecognitionAPI();
     recognition.lang = 'en-IN';
     recognition.continuous = false;
     recognition.interimResults = false;
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: { results: Array<Array<{ transcript: string }>> }) => {
       const transcript = event.results[0][0].transcript;
       onResult(transcript);
     };
 
-    recognition.onerror = (event: any) => {
-      console.error('Voice recognition error:', event.error);
+    recognition.onerror = () => {
+      toast.error('Voice recognition failed. Please try again.');
     };
 
     recognition.start();

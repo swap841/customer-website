@@ -90,12 +90,12 @@ export default function Footer() {
             {/* Social Links */}
             <div className="flex items-center gap-3 mt-4">
               {contactInfo.socialMedia?.facebook && (
-                <a href={contactInfo.socialMedia.facebook} target="_blank" className="w-8 h-8 bg-zinc-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Facebook">
+                <a href={contactInfo.socialMedia.facebook} target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-zinc-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Facebook">
                   <Facebook className="w-4 h-4" />
                 </a>
               )}
               {contactInfo.socialMedia?.instagram && (
-                <a href={contactInfo.socialMedia.instagram} target="_blank" className="w-8 h-8 bg-zinc-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Instagram">
+                <a href={contactInfo.socialMedia.instagram} target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-zinc-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Instagram">
                   <Instagram className="w-4 h-4" />
                 </a>
               )}
@@ -165,10 +165,10 @@ export default function Footer() {
       <div className="border-t border-zinc-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-xs text-zinc-500 font-medium">
-            © {new Date().getFullYear()} {contactInfo.storeName}. {contactInfo.copyrightText || "All rights reserved."}
+            {new Date().getFullYear()} {contactInfo.storeName}. {contactInfo.copyrightText || "All rights reserved."}
           </p>
           <p className="text-xs text-zinc-500 font-medium">
-            Made with ❤️ in India
+            Made with care
           </p>
         </div>
       </div>

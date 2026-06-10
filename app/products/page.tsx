@@ -130,8 +130,8 @@ export default function ProductsPage() {
 
       setLastDoc(docs[Math.min(PAGE_SIZE, docs.length) - 1] || null);
       setHasMore(hasMoreData);
-    } catch (err) {
-      console.error("Error loading products:", err);
+    } catch {
+      // Products load error handled silently
     } finally {
       setLoading(false);
       setLoadingMore(false);

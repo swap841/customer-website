@@ -97,14 +97,12 @@ export default function OrderSuccessClient() {
             }
             setLoading(false);
           },
-          (err) => {
-            console.error("Error listening to order:", err);
+          () => {
             setError("Failed to load order details. Please try again.");
             setLoading(false);
           }
         );
-      } catch (err) {
-        console.error("Error setting up order listener:", err);
+      } catch {
         setError("Failed to load order details. Please try again.");
         setLoading(false);
       }

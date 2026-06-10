@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthHeader } from "@/lib/authHelper";
 import { commit, verifyPaymentSignature, isAdminReady } from "@/lib/firestoreAdmin";
 import type { WriteOp } from "@/lib/firestoreAdmin";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = requireAuthHeader(req);
+    if (auth instanceof Response) return auth;
+
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, userId, orderData, couponCode } = await req.json();
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -24,10 +28,8 @@ export async function POST(req: NextRequest) {
     }
 
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-
     const fullOrder = {
-      ...orderData,
-      id: orderId,
+      ...orderData, id: orderId,
       payment: { method: "razorpay", razorpayOrderId: razorpay_order_id, razorpayPaymentId: razorpay_payment_id, status: "paid" },
       status: "Pending",
       createdAt: new Date().toISOString(),
@@ -62,10 +64,9 @@ export async function POST(req: NextRequest) {
     }
 
     await commit(writes);
-
     return NextResponse.json({ success: true, orderId, message: "Payment verified and order created successfully" });
-  } catch (error: any) {
-    console.error("Payment verification error:", error);
-    return NextResponse.json({ success: false, error: error.message || "Verification failed" }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Verification failed";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

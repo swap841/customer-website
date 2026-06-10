@@ -7,6 +7,7 @@ import { Plus, Minus, Heart, Star, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { getAuth } from "firebase/auth";
+import { useContactInfo } from "@/hooks/useContactInfo";
 
 interface ProductCardProps {
   product: {
@@ -42,6 +43,8 @@ function Stars({ average }: { average: number }) {
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart, removeFromCart, updateQuantity, cartItems } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
+  const { contactInfo } = useContactInfo();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
 
   const cartItem = cartItems.find((item) => item.id === product.id);
   const quantity = cartItem?.quantity || 0;
@@ -149,9 +152,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xl font-bold text-emerald-600">₹{product.price}</span>
+              <span className="text-xl font-bold text-emerald-600">{symbol}{product.price}</span>
               {isDiscounted && (
-                <span className="text-sm text-slate-400 line-through ml-2">₹{mrp}</span>
+                <span className="text-sm text-slate-400 line-through ml-2">{symbol}{mrp}</span>
               )}
             </div>
 

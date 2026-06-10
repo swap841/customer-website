@@ -19,8 +19,10 @@ export default function DynamicBranding({ children }: { children: React.ReactNod
     }
     if (config.business?.font) {
       root.style.setProperty("--font-family", config.business.font);
-      root.style.fontFamily = config.business.font;
     }
+  }, [config]);
+
+  useEffect(() => {
     if (config.business?.name) {
       document.title = config.business.name;
     }
@@ -28,7 +30,7 @@ export default function DynamicBranding({ children }: { children: React.ReactNod
       const link = document.querySelector("link[rel='icon']") as HTMLLinkElement;
       if (link) link.href = config.business.faviconUrl;
     }
-  }, [config]);
+  }, [config.business?.name, config.business?.faviconUrl]);
 
   return <>{children}</>;
 }

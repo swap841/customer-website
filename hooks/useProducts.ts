@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { collection, getDocs, query, where, limit, doc, getDoc, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, where, limit, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import type { Product } from "@/shared/models";
 
@@ -54,16 +54,19 @@ export function useSearchProducts(searchTerm: string) {
   return useQuery({
     queryKey: ["products", "search", searchTerm],
     queryFn: async () => {
-      const q = query(collection(db, "products"), where("active", "==", true), orderBy("name"), limit(50));
+      const q = query(collection(db, "products"), where("active", "==", true), limit(100));
       const snap = await getDocs(q);
       const all = snap.docs.map((d) => mapDoc<Product>(d));
-      if (!searchTerm) return all;
+      if (!searchTerm) return all.slice(0, 50);
       const lower = searchTerm.toLowerCase();
-      return all.filter(
-        (p) =>
-          p.name?.toLowerCase().includes(lower) ||
-          p.description?.toLowerCase().includes(lower)
-      );
+      return all
+        .filter(
+          (p) =>
+            p.name?.toLowerCase().includes(lower) ||
+            p.description?.toLowerCase().includes(lower)
+        )
+        .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+        .slice(0, 50);
     },
     staleTime: 2 * 60 * 1000,
     enabled: searchTerm.length > 0,

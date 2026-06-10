@@ -264,7 +264,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       try {
         await batch.commit();
       } catch (error) {
-        console.error("Error syncing cart to Firestore:", error);
+        // Cart sync error handled silently
       }
     }, 300);
   }, [user]);
@@ -351,7 +351,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setCouponMessage(result.error || "Invalid coupon");
       } else {
         setCouponDiscount(result.discount || 0);
-        setCouponMessage(`Coupon applied! -₹${result.discount?.toFixed(0)}`);
+        setCouponMessage(`Coupon applied! Discount: ${result.discount?.toFixed(0)}`);
       }
     } catch {
       setCouponDiscount(0);
