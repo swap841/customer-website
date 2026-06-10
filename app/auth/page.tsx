@@ -37,6 +37,13 @@ export default function AuthPage() {
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user) router.push("/");
+    });
+    return () => unsub();
+  }, [auth, router]);
+
+  useEffect(() => {
     if (countdown > 0) {
       const t = setTimeout(() => setCountdown(c => c - 1), 1000);
       return () => clearTimeout(t);
@@ -74,12 +81,15 @@ export default function AuthPage() {
 
   const handleResendOtp = async () => {
     if (countdown > 0) return;
+    setOtp(["", "", "", "", "", ""]);
     setResending(true);
     try {
-      await fetch(`${SERVER_URL}/api/auth/send-phone-otp`, {
+      const res = await fetch(`${SERVER_URL}/api/auth/send-phone-otp`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phoneNumber: phoneForOtp }),
       });
+      const data = await res.json();
+      if (!data.success) { toast.error(data.error || "Failed to resend OTP"); return; }
       setCountdown(30);
       toast.success("OTP resent");
     } catch {
@@ -149,10 +159,12 @@ export default function AuthPage() {
   };
 
   const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
     const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     if (!text) return;
     const next = [...otp];
     for (let i = 0; i < text.length; i++) next[i] = text[i];
+    for (let i = text.length; i < 6; i++) next[i] = "";
     setOtp(next);
     const focusIdx = Math.min(text.length, 5);
     otpRefs.current[focusIdx]?.focus();

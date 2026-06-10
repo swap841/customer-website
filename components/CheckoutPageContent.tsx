@@ -127,7 +127,7 @@ export default function CheckoutPageContent() {
 
   const thirdPartyCharge = isThirdPartyDelivery && deliveryOption === "delivery" ? THIRD_PARTY_DELIVERY_CHARGE : 0;
   const baseTotal = deliveryOption === "delivery"
-    ? subtotal + deliveryCharge + taxAmount + thirdPartyCharge
+    ? subtotal + effectiveDeliveryFee + taxAmount + thirdPartyCharge
     : subtotal + taxAmount;
   const finalTotal = Math.max(baseTotal - couponDiscount, 0);
 
@@ -347,7 +347,6 @@ export default function CheckoutPageContent() {
               if (address && deliveryOption === "delivery") {
                 saveAddress(address, location?.lat, location?.lng, selectedAddressLabel || undefined);
               }
-              await saveOrderToFirestore(orderData);
               toast.dismiss(paymentToastId);
               toast.success("Payment successful! Order placed.");
               if (clearCart) clearCart();
@@ -359,6 +358,8 @@ export default function CheckoutPageContent() {
                 toast.success("Order saved locally.");
                 router.push(`/order-success?orderId=${fallbackId}`);
               } else {
+                setIsSubmitting(false);
+                setIsLoading(false);
                 toast.error("Payment received but order saving failed.");
               }
             }
@@ -405,7 +406,7 @@ export default function CheckoutPageContent() {
     if (isSubmitting) return;
     if (!name || name.trim().length < 2) { toast.error("Please enter your full name"); return; }
     if (!phone) { toast.error("Please enter your phone number"); return; }
-    if (!/^\d{10}$/.test(phone.replace(/\D/g, ''))) { toast.error("Please enter a valid 10-digit phone number"); return; }
+    if (!/^[6-9]\d{9}$/.test(phone.replace(/\D/g, ''))) { toast.error("Please enter a valid 10-digit phone number starting with 6-9"); return; }
     if (deliveryOption === "delivery") {
       if (!location) { toast.error("Please set your delivery location"); return; }
       if (!address) { toast.error("Please enter delivery address"); return; }
@@ -592,7 +593,7 @@ export default function CheckoutPageContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="rounded-xl border border-gray-200 p-3 bg-gray-50/50 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-50 transition-all">
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Full Name</label>
-            <input className="w-full bg-transparent outline-none text-gray-800 text-sm" placeholder="Enter your full name" value={name} onChange={(e) => setName(e.target.value)} required />
+            <input className="w-full bg-transparent outline-none text-gray-800 text-sm" placeholder="Enter your full name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} required />
           </div>
           <div className="rounded-xl border border-gray-200 p-3 bg-gray-50/50 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-50 transition-all">
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5"><Phone className="w-3.5 h-3.5 inline mr-1" />Phone Number</label>
@@ -765,7 +766,7 @@ export default function CheckoutPageContent() {
         {couponDiscount > 0 && <p className="mt-2 text-sm text-emerald-700">Discount applied: {symbol}{couponDiscount.toFixed(0)}</p>}
       </div>
 
-      <button onClick={placeOrder} disabled={isLoading || isSubmitting}
+      <button onClick={placeOrder} disabled={isLoading || isSubmitting || (paymentMethod === "COD" && paymentConfig?.codEnabled === false) || (paymentMethod === "Online" && (!paymentConfig?.razorpayEnabled || !paymentConfig?.razorpayKeyId))}
         className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
         {isLoading ? (
           <><Loader2 className="w-5 h-5 animate-spin" /> {paymentMethod === "Online" ? "Opening Payment Gateway..." : "Placing Order..."}</>

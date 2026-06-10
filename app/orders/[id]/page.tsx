@@ -386,7 +386,7 @@ export default function OrderTrackingPage() {
                   setReviewLoading(false);
                 }
               }}
-              disabled={reviewLoading}
+              disabled={reviewLoading || !reviewComment.trim()}
               className="mt-3 inline-flex items-center gap-2 rounded-xl bg-amber-500 text-white px-4 py-2 text-sm font-semibold hover:bg-amber-600 transition disabled:opacity-50"
             >
               {reviewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

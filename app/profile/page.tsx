@@ -214,6 +214,8 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+    if (!customerData.name || customerData.name.trim().length < 2) { toast.error("Name must be at least 2 characters"); return; }
+    if (customerData.phone && !/^[6-9]\d{9}$/.test(customerData.phone.replace(/\D/g, '').slice(-10))) { toast.error("Enter a valid 10-digit phone number"); return; }
     try {
       const docRef = doc(db, "users", user.uid);
       await setDoc(docRef, customerData, { merge: true });
@@ -232,6 +234,7 @@ export default function ProfilePage() {
         const productSnap = await getDoc(productRef);
         if (productSnap.exists()) {
           const currentStock = productSnap.data().stock || 0;
+          if (currentStock < item.quantity) { toast.error(`Only ${currentStock} of ${item.name} available`); continue; }
           await setDoc(productRef, { stock: Math.max(0, currentStock - item.quantity) }, { merge: true });
         }
       }
