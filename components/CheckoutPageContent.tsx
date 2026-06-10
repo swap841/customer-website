@@ -33,8 +33,8 @@ import {
 } from "lucide-react";
 
 import { useContactInfo } from "@/hooks/useContactInfo";
-import { useAddresses } from "@/hooks/useAddresses";
-import AddressHistory from "@/components/AddressHistory";
+import { useAddress } from "@/hooks/useAddress";
+import SavedAddress from "@/components/SavedAddress";
 import { getAppConfig } from "@/lib/appConfig";
 
 const STORE_LAT_DEFAULT = 17.6868;
@@ -118,11 +118,7 @@ export default function CheckoutPageContent() {
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZoneInfo | null>(null);
   const [pincodeValidated, setPincodeValidated] = useState(false);
-  const { savedAddresses, saveAddress, deleteAddress } = useAddresses();
-
-  const savedAddressStrings = savedAddresses.map((a) => a.address);
-
-  const [selectedAddressLabel, setSelectedAddressLabel] = useState<string>("");
+  const { savedAddress, saveAddress, clearAddress } = useAddress();
 
   const effectiveDeliveryFee = deliveryOption === "delivery" ? (subtotal >= FREE_DELIVERY_ABOVE ? 0 : deliveryCharge) : 0;
   const taxAmount = Math.round((subtotal * TAX_PERCENT) / 100);
@@ -210,7 +206,7 @@ export default function CheckoutPageContent() {
           lat: location?.lat || null,
           lng: location?.lng || null,
           geoHash: geoHash || "",
-          label: selectedAddressLabel || "Home",
+          label: "Home",
         } : null,
         geolocation: location ? `${location.lat.toFixed(6)},${location.lng.toFixed(6)}` : "",
         email: user.email,
@@ -359,7 +355,7 @@ export default function CheckoutPageContent() {
 
             if (verifyData.orderId) {
               if (address && deliveryOption === "delivery") {
-                saveAddress(address, location?.lat, location?.lng, selectedAddressLabel || undefined);
+                saveAddress(address, location?.lat, location?.lng);
               }
               toast.dismiss(paymentToastId);
               toast.success("Payment successful! Order placed.");
@@ -483,7 +479,7 @@ export default function CheckoutPageContent() {
           addressLine: deliveryOption === "delivery" ? address : "Store Pickup",
           pincode: deliveryOption === "delivery" ? (address.match(/\b\d{6}\b/)?.[0] || areaCode) : "000000",
           city: cityFromAddress,
-          state: deliveryOption === "delivery" ? "Maharashtra" : "",
+          state: "",  // Will be filled by pincode validation
           lat: location?.lat || null, lng: location?.lng || null,
         },
         deliveryLocation: deliveryOption === "delivery" && location ? {
@@ -544,7 +540,7 @@ export default function CheckoutPageContent() {
 
         try {
           await batch.commit();
-          if (address && deliveryOption === "delivery") saveAddress(address, location?.lat, location?.lng, selectedAddressLabel || undefined);
+          if (address && deliveryOption === "delivery") saveAddress(address, location?.lat, location?.lng);
           toast.success("Order placed successfully!");
           if (clearCart) clearCart();
           router.push(`/order-success?orderId=${orderId}`);
@@ -661,20 +657,19 @@ export default function CheckoutPageContent() {
                 </div>
               )}
 
-              <AddressHistory
-                onSelect={(addr, lat, lng, label) => {
-                  setAddress(addr);
-                  if (label) setSelectedAddressLabel(label);
-                  if (lat && lng) {
-                    setLocation({ lat, lng });
-                    setAreaCode(getAreaCode(lat, lng));
-                    checkDistance(lat, lng);
-                  }
-                }}
-                onDelete={deleteAddress}
-                savedAddresses={savedAddresses}
-                selectedAddress={address}
-              />
+              {savedAddress && (
+                <SavedAddress
+                  address={savedAddress}
+                  onUseAddress={() => {
+                    setAddress(savedAddress.address);
+                    if (savedAddress.lat && savedAddress.lng) {
+                      setLocation({ lat: savedAddress.lat, lng: savedAddress.lng });
+                      checkDistance(savedAddress.lat, savedAddress.lng);
+                    }
+                  }}
+                  onClearAddress={clearAddress}
+                />
+              )}
             </>
           )}
           {deliveryOption === "pickup" && (

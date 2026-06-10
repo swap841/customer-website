@@ -8,6 +8,7 @@ import { db } from "@/lib/firebaseClient";
 import { getAIResponse, getGeminiResponse, setGeminiApiKey } from "@/lib/aiAgent";
 import { useAppConfig } from "@/hooks/useAppConfig";
 import { useContactInfo } from "@/hooks/useContactInfo";
+import { formatMarkdown } from "@/lib/markdownUtils";
 
 export default function ChatBot() {
   const [open, setOpen] = useState(false);
@@ -128,7 +129,11 @@ export default function ChatBot() {
                 <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed whitespace-pre-line ${
                   m.role === "user" ? "bg-emerald-600 text-white rounded-tr-sm" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-tl-sm"
                 }`}>
-                  {m.content}
+                  {m.role === "assistant" ? (
+                    <p className="text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdown(m.content) }} />
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                  )}
                 </div>
               </div>
             ))}

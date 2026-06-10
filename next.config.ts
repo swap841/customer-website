@@ -12,14 +12,16 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
-    unoptimized: true,
     remotePatterns: [
-      { protocol: "https", hostname: "i.ibb.co", pathname: "**" },
-      { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "**" },
       { protocol: "https", hostname: "firebasestorage.googleapis.com", pathname: "**" },
       { protocol: "https", hostname: "images.unsplash.com", pathname: "**" },
+      { protocol: "https", hostname: "i.ibb.co", pathname: "**" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "**" },
       { protocol: "https", hostname: "images.pexels.com", pathname: "**" },
     ],
+    formats: ["image/webp", "image/avif"],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   async headers() {
     return [
