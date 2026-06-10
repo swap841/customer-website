@@ -657,7 +657,9 @@ export default function CheckoutPageContent() {
 
     if (!name || name.trim().length < 2) { toast.error("Please enter your full name"); return; }
     if (!phone) { toast.error("Please enter your phone number"); return; }
-    if (!/^[6-9]\d{9}$/.test(phone.replace(/\D/g, ''))) { toast.error("Please enter a valid 10-digit phone number starting with 6-9"); return; }
+    const phoneRegex = /^[6-9]\d{9}$/;
+    const cleanPhone = phone.replace(/\s/g, "").replace(/^\+91/, "");
+    if (!phoneRegex.test(cleanPhone)) { toast.error("Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"); setIsSubmitting(false); return; }
     if (deliveryOption === "delivery") {
       if (!location) { toast.error("Please set your delivery location"); return; }
       if (!address) { toast.error("Please enter delivery address"); return; }
@@ -742,15 +744,16 @@ export default function CheckoutPageContent() {
                 className="flex-1 bg-transparent outline-none text-gray-800 text-sm"
                 placeholder="Enter your phone number"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  setPhone(val);
+                }}
                 type="tel"
                 inputMode="numeric"
                 required
               />
             </div>
-            {phone.length === 10 && !/^[6-9]/.test(phone) && (
-              <p className="text-xs text-red-500 mt-1">Phone must start with 6-9</p>
-            )}
+            <p className="text-[10px] text-gray-400 mt-1">10-digit Indian mobile number starting with 6-9</p>
           </div>
         </div>
         {deliveryOption === "delivery" && (

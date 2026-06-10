@@ -11,6 +11,23 @@ const GEMINI_MODEL = "gemini-2.0-flash";
 const GEMINI_URL = (key: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
 
+// Rate limiting
+const chatRateLimit = new Map<string, { count: number; resetTime: number }>();
+const AI_RATE_LIMIT = 10;
+const AI_RATE_WINDOW = 60 * 60 * 1000;
+
+function checkAiRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = chatRateLimit.get(userId);
+  if (entry && now < entry.resetTime) {
+    if (entry.count >= AI_RATE_LIMIT) return false;
+    entry.count++;
+  } else {
+    chatRateLimit.set(userId, { count: 1, resetTime: now + AI_RATE_WINDOW });
+  }
+  return true;
+}
+
 async function getGeminiApiKey(): Promise<string | null> {
   try {
     const config = await getAppConfig();
@@ -66,8 +83,16 @@ RULES:
 export async function getGeminiResponse(
   input: string,
   ctx: Partial<GeminiSystemContext>,
-  conversationHistory: { role: string; content: string }[]
+  conversationHistory: { role: string; content: string }[],
+  userId?: string
 ): Promise<{ response: string; steps: string[] } | null> {
+  if (userId && !checkAiRateLimit(userId)) {
+    return {
+      response: "You've reached the limit of 10 messages per hour. Please try again later.",
+      steps: [],
+    };
+  }
+
   const geminiKey = await getGeminiApiKey();
   if (!geminiKey) return null;
 
@@ -376,7 +401,14 @@ function findBestMatch(input: string): { response: string; steps: string[] } | n
   return null;
 }
 
-export function getAIResponse(input: string): { response: string; steps: string[] } {
+export function getAIResponse(input: string, userId?: string): { response: string; steps: string[] } {
+  if (userId && !checkAiRateLimit(userId)) {
+    return {
+      response: "You've reached the limit of 10 messages per hour. Please try again later.",
+      steps: [],
+    };
+  }
+
   const lower = input.trim().toLowerCase();
 
   if (!lower || lower.length <= 2 || greetings.some(g => lower === g || lower.startsWith(g))) {
