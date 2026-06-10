@@ -1,37 +1,12 @@
-import { getMessaging, getToken, isSupported } from "firebase/messaging";
-import { doc, setDoc } from "firebase/firestore";
-import { app, db } from "@/firebaseConfig";
-
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "https://grocery-server-u2qq.onrender.com";
-
-export async function requestFcmToken(userId: string): Promise<string | null> {
+export async function requestFcmToken(uid: string): Promise<string | null> {
   try {
-    const supported = await isSupported();
-    if (!supported) return null;
-
-    const messaging = getMessaging(app);
-    const currentToken = await getToken(messaging, {
+    if (typeof window === "undefined") return null;
+    const { getMessaging, getToken } = await import("firebase/messaging");
+    const messaging = getMessaging();
+    const token = await getToken(messaging, {
       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
     });
-
-    if (currentToken) {
-      // Store locally in Firestore
-      await setDoc(doc(db, "users", userId), { fcmToken: currentToken }, { merge: true });
-      // Register with server for OTP delivery
-      try {
-        const { getAuth } = await import("firebase/auth");
-        const token = await getAuth().currentUser?.getIdToken();
-        if (token) {
-          await fetch(`${SERVER_URL}/api/auth/register-fcm-token`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ userId, fcmToken: currentToken, platform: "web" }),
-          });
-        }
-      } catch {}
-      return currentToken;
-    }
-    return null;
+    return token;
   } catch {
     return null;
   }

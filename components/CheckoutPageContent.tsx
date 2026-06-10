@@ -13,6 +13,7 @@ import TimeSlotPicker, { type TimeSlot } from "./TimeSlotPicker";
 import LocationPicker from "./LocationPicker";
 import AddressVerification from "./AddressVerification";
 import DeliveryRadiusWarning from "./DeliveryRadiusWarning";
+import PermissionGate from "./PermissionGate";
 import { toast } from "sonner";
 import type { DeliveryZoneInfo, PincodeValidation } from "@/lib/locationUtils";
 import {
@@ -118,6 +119,8 @@ export default function CheckoutPageContent() {
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZoneInfo | null>(null);
   const [pincodeValidated, setPincodeValidated] = useState(false);
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [showPermissionGate, setShowPermissionGate] = useState(false);
   const { savedAddress, saveAddress, clearAddress } = useAddress();
 
   const effectiveDeliveryFee = deliveryOption === "delivery" ? (subtotal >= FREE_DELIVERY_ABOVE ? 0 : deliveryCharge) : 0;
@@ -414,6 +417,26 @@ export default function CheckoutPageContent() {
 
   const placeOrder = async () => {
     if (isSubmitting) return;
+
+    // Check permissions before placing order
+    if (deliveryOption === "delivery") {
+      const locPermission = await navigator.permissions.query({ name: "geolocation" }).catch(() => ({ state: "prompt" }));
+      const notifPermission = typeof Notification !== "undefined" ? Notification.permission : "granted";
+      
+      if (locPermission.state !== "granted") {
+        setShowPermissionGate(true);
+        setIsSubmitting(false);
+        setIsLoading(false);
+        return;
+      }
+      if (notifPermission !== "granted") {
+        setShowPermissionGate(true);
+        setIsSubmitting(false);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     if (!name || name.trim().length < 2) { toast.error("Please enter your full name"); return; }
     if (!phone) { toast.error("Please enter your phone number"); return; }
     if (!/^[6-9]\d{9}$/.test(phone.replace(/\D/g, ''))) { toast.error("Please enter a valid 10-digit phone number starting with 6-9"); return; }
@@ -786,6 +809,7 @@ export default function CheckoutPageContent() {
           <>{paymentMethod === "Online" ? `Pay ${symbol}${finalTotal} with Razorpay` : `Place Order - ${symbol}${finalTotal}`}</>
         )}
       </button>
+      {showPermissionGate && <PermissionGate onGranted={() => { setPermissionsGranted(true); setShowPermissionGate(false); }} />}
     </div>
   );
 }

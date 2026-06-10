@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCategoryByName } from "@/hooks/useCategories";
 import { useProductsByCategory } from "@/hooks/useProducts";
 import Link from "next/link";
+import Image from "next/image";
 import ProductCard from "@/components/ProductCard";
 import { Loader2 } from "lucide-react";
 
@@ -53,7 +54,7 @@ export default function CategoryPage() {
           </div>
           {category.imageUrl && (
             <div className="rounded-[32px] overflow-hidden border border-emerald-100 bg-white shadow-xl max-h-60 sm:max-h-72">
-              <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover" />
+              <Image src={category.imageUrl} alt={category.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
             </div>
           )}
         </div>

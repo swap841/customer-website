@@ -12,7 +12,6 @@ import {
 } from "firebase/auth";
 import { app } from "@/firebaseConfig";
 import { useCart } from "@/components/CartContext";
-import { requestFcmToken } from "@/lib/firebaseMessaging";
 import {
   ShoppingCart,
   Menu,
@@ -52,9 +51,6 @@ export default function Navbar() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        requestFcmToken(currentUser.uid).catch(() => {});
-      }
     });
     return () => unsubscribe();
   }, []);
@@ -113,7 +109,7 @@ export default function Navbar() {
             className="flex items-center gap-2 shrink-0"
           >
             {contactInfo.logoUrl ? (
-              <img src={contactInfo.logoUrl} alt={contactInfo.storeName} className="w-8 h-8 rounded-lg object-cover shadow-md" />
+              <Image src={contactInfo.logoUrl} alt={contactInfo.storeName} width={32} height={32} className="w-8 h-8 rounded-lg object-cover shadow-md" />
             ) : (
               <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-md">
                 <span className="text-white text-sm font-black">{contactInfo.storeName?.charAt(0) || "M"}</span>

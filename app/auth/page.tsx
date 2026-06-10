@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "@/firebaseConfig";
-import { requestFcmToken } from "@/lib/firebaseMessaging";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -24,9 +23,6 @@ export default function AuthPage() {
     try {
       const cred = await signInWithPopup(auth, new GoogleAuthProvider());
       toast.success("Signed in with Google");
-      try {
-        await requestFcmToken(cred.user.uid);
-      } catch {}
       router.push("/");
     } catch (err: unknown) {
       const e = err as { code?: string };

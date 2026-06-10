@@ -25,21 +25,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Fresh Groceries Delivered Fast",
-    default: "Fresh Groceries Delivered Fast",
+    default: "My Store Grocery - Fresh Groceries Delivered",
+    template: "%s | My Store Grocery",
   },
   description:
-    "Order farm-fresh organic produce, daily essentials & household items online. Fast delivery to your doorstep within 24 hours.",
-  keywords: [
-    "grocery", "delivery", "fresh produce", "organic", "online grocery",
-    "farm fresh", "India",
-  ],
+    "Order fresh groceries online. Get same-day delivery of fruits, vegetables, dairy, and more.",
   openGraph: {
-    title: "Fresh Groceries Delivered Fast",
-    description:
-      "Order farm-fresh organic produce, daily essentials & household items online. Fast delivery to your doorstep within 24 hours.",
     type: "website",
+    locale: "en_IN",
+    siteName: "My Store Grocery",
   },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({
@@ -49,6 +45,8 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" />
+        <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

@@ -6,6 +6,7 @@ import { db } from "@/lib/firebaseClient";
 import ProductCard from "@/components/ProductCard";
 import { Search, Loader2 } from "lucide-react";
 import { VoiceSearch } from "@/components/VoiceSearch";
+import Image from "next/image";
 import type { Product } from "@/shared/models";
 
 interface Category {
@@ -214,7 +215,7 @@ export default function ProductsPage() {
                   }`}
                 >
                   {cat.imageUrl && (
-                    <img src={cat.imageUrl} alt="" className="w-4 h-4 rounded-full object-cover" />
+                    <Image src={cat.imageUrl} alt="" width={16} height={16} className="w-4 h-4 rounded-full object-cover" />
                   )}
                   {cat.displayName}
                   <span className={`text-xs ${selectedCategory === cat.id ? "text-emerald-100" : "text-gray-500"}`}>({getProductCount(cat.id)})</span>

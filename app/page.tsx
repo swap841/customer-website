@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
+import Image from "next/image";
 import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
 import { useBanners } from "@/hooks/useBanners";
@@ -83,10 +84,12 @@ export default function Home() {
             ) : bannerList.length > 0 ? (
               <div className="w-full relative aspect-[4/3] rounded-[20px] overflow-hidden shadow-xl shadow-emerald-500/10 border border-emerald-100/60 group">
                 <a href={bannerList[currentSlide].link || "/products"}>
-                  <img
-                    src={bannerList[currentSlide].imageUrl}
+                  <Image
+                    src={bannerList[currentSlide].imageUrl || "/icon.png"}
                     alt="Store Banner"
-                    className="w-full h-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105"
+                    fill
+                    sizes="100vw"
+                    className="object-cover transition-all duration-700 ease-in-out group-hover:scale-105"
                   />
                 </a>
                 {/* Gradient overlay */}
@@ -202,7 +205,7 @@ export default function Home() {
                   >
                     <div className="relative overflow-hidden rounded-2xl bg-gray-50">
                       {product.imageUrl ? (
-                        <img src={product.imageUrl} alt={product.name} className="h-44 w-full object-cover transition duration-500 group-hover:scale-105" />
+                        <Image src={product.imageUrl} alt={product.name} width={400} height={176} className="h-44 w-full object-cover transition duration-500 group-hover:scale-105" />
                       ) : (
                         <div className="h-44 w-full flex items-center justify-center bg-emerald-50/50 text-emerald-800 font-bold">{product.name}</div>
                       )}

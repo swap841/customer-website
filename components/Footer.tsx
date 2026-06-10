@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Mail,
   Phone,
@@ -46,7 +47,7 @@ export default function Footer() {
           <div className="col-span-2 sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               {contactInfo.logoUrl ? (
-                <img src={contactInfo.logoUrl} alt={contactInfo.storeName} className="w-8 h-8 rounded-lg object-cover shadow-md" />
+                <Image src={contactInfo.logoUrl} alt={contactInfo.storeName} width={32} height={32} className="w-8 h-8 rounded-lg object-cover shadow-md" />
               ) : (
                 <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-md">
                   <span className="text-white text-sm font-black">{contactInfo.storeName?.charAt(0) || "M"}</span>
