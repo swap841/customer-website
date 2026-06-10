@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "./CartContext";
 import { getAuth } from "firebase/auth";
@@ -31,7 +31,9 @@ import {
   Mail,
   User,
   Clock,
+  Shield,
 } from "lucide-react";
+import { requestFcmToken, sendCheckoutOTP, verifyCheckoutOTP } from "@/lib/firebaseMessaging";
 
 import { useContactInfo } from "@/hooks/useContactInfo";
 import { useAddress } from "@/hooks/useAddress";
@@ -123,6 +125,13 @@ export default function CheckoutPageContent() {
   const [showPermissionGate, setShowPermissionGate] = useState(false);
   const { savedAddress, saveAddress, clearAddress } = useAddress();
 
+  const [otpStep, setOtpStep] = useState<"idle" | "sending" | "input" | "verifying" | "verified" | "failed">("idle");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpAttempts, setOtpAttempts] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+
   const effectiveDeliveryFee = deliveryOption === "delivery" ? (subtotal >= FREE_DELIVERY_ABOVE ? 0 : deliveryCharge) : 0;
   const taxAmount = Math.round((subtotal * TAX_PERCENT) / 100);
   const totalSavings = effectiveDeliveryFee === 0 && deliveryOption === "delivery" ? Math.round(contactInfo.deliveryFeePerKm || 5) * 5 : 0;
@@ -164,6 +173,29 @@ export default function CheckoutPageContent() {
       setCouponMessage(null);
     }
   }, [deliveryOption, cartItems]);
+
+  useEffect(() => {
+    if (otpStep === "sending" && user && phone) {
+      const requestOTP = async () => {
+        const result = await sendCheckoutOTP(phone, user.uid);
+        if (result.success) {
+          setOtpStep("input");
+          setOtpCountdown(60);
+        } else {
+          setOtpStep("failed");
+          setOtpError(result.error || "Failed to send OTP");
+        }
+      };
+      requestOTP();
+    }
+  }, [otpStep, user, phone]);
+
+  useEffect(() => {
+    if (otpCountdown > 0) {
+      timerRef.current = setTimeout(() => setOtpCountdown(prev => prev - 1), 1000);
+    }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [otpCountdown]);
 
   const checkDistance = useCallback((lat: number, lng: number) => {
     const dist = getDistanceKm(STORE_LAT, STORE_LNG, lat, lng);
@@ -415,45 +447,41 @@ export default function CheckoutPageContent() {
     }
   };
 
-  const placeOrder = async () => {
-    if (isSubmitting) return;
-
-    // Check permissions before placing order
-    if (deliveryOption === "delivery") {
-      const locPermission = await navigator.permissions.query({ name: "geolocation" }).catch(() => ({ state: "prompt" }));
-      const notifPermission = typeof Notification !== "undefined" ? Notification.permission : "granted";
-      
-      if (locPermission.state !== "granted") {
-        setShowPermissionGate(true);
-        setIsSubmitting(false);
-        setIsLoading(false);
-        return;
-      }
-      if (notifPermission !== "granted") {
-        setShowPermissionGate(true);
-        setIsSubmitting(false);
-        setIsLoading(false);
-        return;
-      }
-    }
-
-    if (!name || name.trim().length < 2) { toast.error("Please enter your full name"); return; }
-    if (!phone) { toast.error("Please enter your phone number"); return; }
-    if (!/^[6-9]\d{9}$/.test(phone.replace(/\D/g, ''))) { toast.error("Please enter a valid 10-digit phone number starting with 6-9"); return; }
-    if (deliveryOption === "delivery") {
-      if (!location) { toast.error("Please set your delivery location"); return; }
-      if (!address) { toast.error("Please enter delivery address"); return; }
-      if (!address.match(/\b\d{6}\b/)) { toast.error("Please include a 6-digit pincode in your address"); return; }
+  const handleVerifyOTP = async () => {
+    if (!user || !phone || otpCode.length !== 4) return;
+    
+    setOtpStep("verifying");
+    setOtpError(null);
+    
+    const result = await verifyCheckoutOTP(phone, otpCode, user.uid);
+    
+    if (result.success) {
+      setOtpStep("verified");
+      setTimeout(() => {
+        proceedWithOrder();
+      }, 500);
     } else {
-      setLocation({ lat: 0, lng: 0 });
-      setAreaCode("PICKUP");
+      setOtpAttempts(prev => prev + 1);
+      setOtpStep("input");
+      setOtpError(result.error || "OTP verification failed");
+      setOtpCode("");
+      
+      if (otpAttempts >= 2) {
+        setOtpError("Too many failed attempts. Please check your phone number.");
+      }
     }
-    if (!user) { toast.error("Please login to place an order"); return; }
-    if (cartItems.length === 0) { toast.error("Your cart is empty"); return; }
-    if (finalTotal <= 0) { toast.error("Total must be greater than zero"); return; }
+  };
 
-    setIsSubmitting(true);
-    setIsLoading(true);
+  const handleResendOTP = async () => {
+    if (!user || !phone) return;
+    setOtpStep("sending");
+    setOtpCode("");
+    setOtpError(null);
+    setOtpAttempts(0);
+  };
+
+  const proceedWithOrder = async () => {
+    if (!user) return;
 
     try {
       await saveUserProfile();
@@ -502,7 +530,7 @@ export default function CheckoutPageContent() {
           addressLine: deliveryOption === "delivery" ? address : "Store Pickup",
           pincode: deliveryOption === "delivery" ? (address.match(/\b\d{6}\b/)?.[0] || areaCode) : "000000",
           city: cityFromAddress,
-          state: "",  // Will be filled by pincode validation
+          state: "",
           lat: location?.lat || null, lng: location?.lng || null,
         },
         deliveryLocation: deliveryOption === "delivery" && location ? {
@@ -529,6 +557,7 @@ export default function CheckoutPageContent() {
         rejectionHistory: [],
         couponApplied: couponDiscount > 0 ? couponCode : null,
         deliveryTimeSlot: preferredSlot,
+        phoneVerified: true,
       };
 
       if (paymentMethod === "Online") {
@@ -568,16 +597,66 @@ export default function CheckoutPageContent() {
           if (clearCart) clearCart();
           router.push(`/order-success?orderId=${orderId}`);
         } catch (error: any) {
-          // Order batch error handled silently
           toast.error(error?.message || "Failed to place order. Please try again.");
         }
       }
     } catch (error) {
-      // Order placement error handled silently
       toast.error("An error occurred while placing your order.");
     } finally {
       setIsSubmitting(false);
-      if (paymentMethod === "COD") setIsLoading(false);
+      setIsLoading(false);
+      setOtpStep("idle");
+    }
+  };
+
+  const placeOrder = async () => {
+    if (isSubmitting) return;
+
+    // Check permissions before placing order
+    if (deliveryOption === "delivery") {
+      const locPermission = await navigator.permissions.query({ name: "geolocation" }).catch(() => ({ state: "prompt" }));
+      const notifPermission = typeof Notification !== "undefined" ? Notification.permission : "granted";
+      
+      if (locPermission.state !== "granted") {
+        setShowPermissionGate(true);
+        setIsSubmitting(false);
+        setIsLoading(false);
+        return;
+      }
+      if (notifPermission !== "granted") {
+        setShowPermissionGate(true);
+        setIsSubmitting(false);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    if (!name || name.trim().length < 2) { toast.error("Please enter your full name"); return; }
+    if (!phone) { toast.error("Please enter your phone number"); return; }
+    if (!/^[6-9]\d{9}$/.test(phone.replace(/\D/g, ''))) { toast.error("Please enter a valid 10-digit phone number starting with 6-9"); return; }
+    if (deliveryOption === "delivery") {
+      if (!location) { toast.error("Please set your delivery location"); return; }
+      if (!address) { toast.error("Please enter delivery address"); return; }
+      if (!address.match(/\b\d{6}\b/)) { toast.error("Please include a 6-digit pincode in your address"); return; }
+    } else {
+      setLocation({ lat: 0, lng: 0 });
+      setAreaCode("PICKUP");
+    }
+    if (!user) { toast.error("Please login to place an order"); return; }
+    if (cartItems.length === 0) { toast.error("Your cart is empty"); return; }
+    if (finalTotal <= 0) { toast.error("Total must be greater than zero"); return; }
+
+    setIsSubmitting(true);
+
+    try {
+      await requestFcmToken(user.uid);
+      setOtpStep("sending");
+      setOtpError(null);
+      setOtpAttempts(0);
+      setOtpCode("");
+    } catch (err) {
+      toast.error("Failed to initiate verification. Please try again.");
+      setIsSubmitting(false);
     }
   };
 
@@ -810,6 +889,114 @@ export default function CheckoutPageContent() {
         )}
       </button>
       {showPermissionGate && <PermissionGate onGranted={() => { setPermissionsGranted(true); setShowPermissionGate(false); }} />}
+
+      {otpStep !== "idle" && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+            {otpStep === "sending" && (
+              <div className="text-center">
+                <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto mb-3" />
+                <h2 className="text-lg font-bold text-gray-900">Sending OTP</h2>
+                <p className="text-sm text-gray-500 mt-1">Sending verification code to +91 {phone}</p>
+              </div>
+            )}
+            
+            {otpStep === "input" && (
+              <div>
+                <div className="text-center mb-4">
+                  <Shield className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
+                  <h2 className="text-lg font-bold text-gray-900">Verify Your Phone</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Enter the 4-digit code sent to +91 {phone}
+                  </p>
+                </div>
+                
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  value={otpCode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                    setOtpCode(val);
+                    setOtpError(null);
+                  }}
+                  placeholder="0000"
+                  autoFocus
+                  className="w-full text-center text-2xl tracking-[0.5em] font-mono py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 mb-3"
+                />
+                
+                {otpError && (
+                  <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg mb-3">
+                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                    <p className="text-xs text-red-600">{otpError}</p>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    onClick={handleResendOTP}
+                    disabled={otpCountdown > 0}
+                    className="text-sm text-emerald-600 disabled:text-gray-400 font-semibold"
+                  >
+                    {otpCountdown > 0 ? `Resend in ${otpCountdown}s` : "Resend OTP"}
+                  </button>
+                  <span className="text-xs text-gray-400">{otpAttempts}/3 attempts</span>
+                </div>
+                
+                <button
+                  onClick={handleVerifyOTP}
+                  disabled={otpCode.length !== 4 || otpAttempts >= 3}
+                  className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Verify & Place Order
+                </button>
+              </div>
+            )}
+            
+            {otpStep === "verifying" && (
+              <div className="text-center">
+                <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto mb-3" />
+                <h2 className="text-lg font-bold text-gray-900">Verifying OTP</h2>
+                <p className="text-sm text-gray-500 mt-1">Please wait...</p>
+              </div>
+            )}
+            
+            {otpStep === "verified" && (
+              <div className="text-center">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+                <h2 className="text-lg font-bold text-gray-900">Verified!</h2>
+                <p className="text-sm text-gray-500 mt-1">Placing your order...</p>
+              </div>
+            )}
+            
+            {otpStep === "failed" && (
+              <div>
+                <div className="text-center mb-4">
+                  <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-2" />
+                  <h2 className="text-lg font-bold text-gray-900">Verification Failed</h2>
+                  <p className="text-sm text-red-500 mt-1">{otpError}</p>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => { setOtpStep("sending"); setOtpError(null); }}
+                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={() => { setOtpStep("idle"); setIsSubmitting(false); }}
+                    className="w-full py-3 border border-gray-300 text-gray-700 rounded-xl font-bold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
