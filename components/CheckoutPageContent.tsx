@@ -934,7 +934,12 @@ export default function CheckoutPageContent() {
           <>{paymentMethod === "Online" ? `Pay ${symbol}${finalTotal} with Razorpay` : `Place Order - ${symbol}${finalTotal}`}</>
         )}
       </button>
-      {showPermissionGate && <PermissionGate onGranted={() => { setPermissionsGranted(true); setShowPermissionGate(false); }} />}
+      {showPermissionGate && (
+  <PermissionGate
+    onGranted={() => { setPermissionsGranted(true); setShowPermissionGate(false); }}
+    onClose={() => { setShowPermissionGate(false); setIsSubmitting(false); }}
+  />
+)}
 
       <PermissionDialog
         isOpen={showNotificationDialog}
@@ -963,6 +968,7 @@ export default function CheckoutPageContent() {
                 <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto mb-3" />
                 <h2 className="text-lg font-bold text-gray-900">Sending OTP</h2>
                 <p className="text-sm text-gray-500 mt-1">Sending verification code to +91 {phone}</p>
+                <p className="text-xs text-gray-400 mt-2">You&apos;ll receive a notification with the code</p>
               </div>
             )}
             
@@ -974,6 +980,14 @@ export default function CheckoutPageContent() {
                   <p className="text-sm text-gray-500 mt-1">
                     Enter the 4-digit code sent to +91 {phone}
                   </p>
+                  <div className="mt-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200">
+                    <p className="text-xs text-emerald-700 font-medium">
+                      📱 Check your browser notifications for the OTP code
+                    </p>
+                    <p className="text-[10px] text-emerald-600 mt-1">
+                      Look for a notification pop-up on your screen
+                    </p>
+                  </div>
                 </div>
                 
                 <input
