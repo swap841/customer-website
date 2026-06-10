@@ -180,7 +180,7 @@ export default function Navbar() {
                   className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl hover:bg-zinc-50 transition-colors border border-transparent hover:border-zinc-100"
                 >
                   <Image
-                    src={user.photoURL || "/fallback-image.png"}
+                    src={user.photoURL || "/fallback-avatar.svg"}
                     width={32}
                     height={32}
                     alt="Profile"

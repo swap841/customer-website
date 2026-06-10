@@ -7,8 +7,9 @@ import { collection, query, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import {
   Package, Clock, Truck, CheckCircle2, AlertCircle, XCircle,
-  ChevronRight, Loader2, Hash, IndianRupee, ShoppingBag, Calendar, ArrowLeft, ShieldCheck,
+  ChevronRight, Loader2, Hash, ShoppingBag, Calendar, ArrowLeft, ShieldCheck,
 } from "lucide-react";
+import { useContactInfo } from "@/hooks/useContactInfo";
 import Link from "next/link";
 
 interface OrderItem {
@@ -49,6 +50,8 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  const { contactInfo } = useContactInfo();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
 
   useEffect(() => {
     const auth = getAuth();
@@ -193,7 +196,7 @@ export default function OrdersPage() {
                   <div className="flex items-center justify-between text-xs text-zinc-500">
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-1">
-                        <IndianRupee className="w-3 h-3" />{order.totalAmount}
+                        {symbol}{order.totalAmount}
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />{formatDate(order.createdAt)}

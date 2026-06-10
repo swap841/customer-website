@@ -180,7 +180,8 @@ export default function CheckoutPageContent() {
   useEffect(() => {
     if (otpStep === "sending" && user && phone) {
       const requestOTP = async () => {
-        const result = await sendCheckoutOTP(phone, user.uid);
+        const cleanPhoneForOTP = phone.replace(/\s/g, "").replace(/^\+91/, "").replace(/^91/, "");
+        const result = await sendCheckoutOTP(cleanPhoneForOTP, user.uid);
         if (result.success) {
           setOtpStep("input");
           setOtpCountdown(60);
@@ -456,7 +457,8 @@ export default function CheckoutPageContent() {
     setOtpStep("verifying");
     setOtpError(null);
     
-    const result = await verifyCheckoutOTP(phone, otpCode, user.uid);
+    const cleanPhoneForVerify = phone.replace(/\s/g, "").replace(/^\+91/, "").replace(/^91/, "");
+    const result = await verifyCheckoutOTP(cleanPhoneForVerify, otpCode, user.uid);
     
     if (result.success) {
       setOtpStep("verified");
@@ -658,7 +660,7 @@ export default function CheckoutPageContent() {
     if (!name || name.trim().length < 2) { toast.error("Please enter your full name"); return; }
     if (!phone) { toast.error("Please enter your phone number"); return; }
     const phoneRegex = /^[6-9]\d{9}$/;
-    const cleanPhone = phone.replace(/\s/g, "").replace(/^\+91/, "");
+    const cleanPhone = phone.replace(/\s/g, "").replace(/^\+91/, "").replace(/^91/, "");
     if (!phoneRegex.test(cleanPhone)) { toast.error("Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"); setIsSubmitting(false); return; }
     if (deliveryOption === "delivery") {
       if (!location) { toast.error("Please set your delivery location"); return; }

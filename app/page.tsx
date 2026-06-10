@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import ProductCard from "@/components/ProductCard";
+import { useCart } from "@/components/CartContext";
 import { useCategories } from "@/hooks/useCategories";
 import { useCategoriesWithCount } from "@/hooks/useCategoriesWithCount";
 import { useProducts } from "@/hooks/useProducts";
@@ -16,6 +18,7 @@ export default function Home() {
   const { data: categoriesWithCount, isLoading: catsCountLoading } = useCategoriesWithCount();
   const { data: products, isLoading: prodsLoading } = useProducts(8);
   const { data: banners, isLoading: bannersLoading } = useBanners();
+  const { subtotal } = useCart();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const symbol = contactInfo.currencySymbol || "\u20B9";
@@ -69,7 +72,7 @@ export default function Home() {
                 <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
               <Link
-                href="/category/vegetables"
+                href="/products"
                 className="inline-flex items-center gap-2 rounded-[20px] border-2 border-emerald-200 bg-white/70 backdrop-blur-sm px-7 py-3.5 text-sm font-bold text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-300"
               >
                 {contactInfo.heroSecondaryCtaText || "Explore categories"}
@@ -255,52 +258,15 @@ export default function Home() {
                 </div>
               ))
             ) : (
-              (products ?? []).map((product) => {
-                const mrp = product.mrp || product.price;
-                const hasDiscount = mrp > product.price;
-                const discountPercent = hasDiscount ? Math.round(((mrp - product.price) / mrp) * 100) : 0;
-                return (
-                  <Link
-                    key={product.id}
-                    href={`/products/${product.id}`}
-                    className="group relative overflow-hidden rounded-[20px] border border-emerald-100/60 bg-white p-4 shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300"
-                  >
-                    <div className="relative overflow-hidden rounded-2xl bg-gray-50">
-                      {product.imageUrl ? (
-                        <Image src={product.imageUrl} alt={product.name} width={400} height={176} className="h-44 w-full object-cover transition duration-500 group-hover:scale-105" />
-                      ) : (
-                        <div className="h-44 w-full flex items-center justify-center bg-emerald-50/50 text-emerald-800 font-bold">{product.name}</div>
-                      )}
-                      {hasDiscount && (
-                        <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-md">
-                          {discountPercent}% OFF
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-3">
-                      {product.rating && product.rating.count > 0 && (
-                        <div className="flex items-center gap-1 mb-1.5">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star key={s} size={13} className={s <= Math.round(product.rating!.average) ? "fill-amber-400 text-amber-400" : "text-gray-200"} />
-                          ))}
-                          <span className="text-[10px] text-gray-400 ml-1">({product.rating.count})</span>
-                        </div>
-                      )}
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-400 font-semibold">{product.categoryId}</p>
-                      <h3 className="mt-1.5 text-base font-bold text-gray-900 leading-snug line-clamp-2">{product.name}</h3>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-extrabold text-emerald-700">{symbol}{product.price}</span>
-                        {hasDiscount && (
-                          <span className="text-sm text-zinc-400 line-through">{symbol}{mrp}</span>
-                        )}
-                      </div>
-                      <span className="text-xs font-medium text-zinc-500 bg-zinc-50 px-2.5 py-1 rounded-full">{product.weight}{product.unit}</span>
-                    </div>
-                  </Link>
-                );
-              })
+              (products ?? []).map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={{
+                    ...product,
+                    discountPercentage: product.mrp && product.price ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0,
+                  }}
+                />
+              ))
             )}
           </div>
         </section>
@@ -325,7 +291,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="mt-5 h-3 rounded-full bg-white/20 overflow-hidden">
-              <div className="h-full w-3/5 rounded-full bg-white/80 relative">
+              <div className="h-full rounded-full bg-white/80 relative" style={{ width: `${Math.min(((subtotal || 0) / (contactInfo.freeDeliveryAbove || 100)) * 100, 100)}%` }}>
                 <div className="absolute inset-0 bg-gradient-to-r from-white/60 to-white/0 rounded-full" />
               </div>
             </div>

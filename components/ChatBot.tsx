@@ -9,6 +9,7 @@ import { getAIResponse, getGeminiResponse } from "@/lib/aiAgent";
 import { useAppConfig } from "@/hooks/useAppConfig";
 import { useContactInfo } from "@/hooks/useContactInfo";
 import { formatMarkdown } from "@/lib/markdownUtils";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 export default function ChatBot() {
   const [open, setOpen] = useState(false);
@@ -124,7 +125,7 @@ export default function ChatBot() {
                   m.role === "user" ? "bg-emerald-600 text-white rounded-tr-sm" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-tl-sm"
                 }`}>
                   {m.role === "assistant" ? (
-                    <p className="text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdown(m.content) }} />
+                    <p className="text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: sanitizeHtml(formatMarkdown(m.content)) }} />
                   ) : (
                     <p className="text-sm whitespace-pre-wrap">{m.content}</p>
                   )}
