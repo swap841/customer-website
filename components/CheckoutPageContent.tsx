@@ -13,7 +13,6 @@ import TimeSlotPicker, { type TimeSlot } from "./TimeSlotPicker";
 import LocationPicker from "./LocationPicker";
 import AddressVerification from "./AddressVerification";
 import DeliveryRadiusWarning from "./DeliveryRadiusWarning";
-import PincodeInput from "./PincodeInput";
 import { toast } from "sonner";
 import type { DeliveryZoneInfo, PincodeValidation } from "@/lib/locationUtils";
 import {
@@ -37,7 +36,6 @@ import { useContactInfo } from "@/hooks/useContactInfo";
 import { useAddresses } from "@/hooks/useAddresses";
 import AddressHistory from "@/components/AddressHistory";
 import { getAppConfig } from "@/lib/appConfig";
-import PhoneVerification from "@/components/PhoneVerification";
 
 const STORE_LAT_DEFAULT = 17.6868;
 const STORE_LNG_DEFAULT = 74.0066;
@@ -100,7 +98,6 @@ export default function CheckoutPageContent() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
-  const [phoneVerified, setPhoneVerified] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [geoHash, setGeoHash] = useState("");
   const [areaCode, setAreaCode] = useState("");
@@ -419,7 +416,6 @@ export default function CheckoutPageContent() {
     }
     if (!user) { toast.error("Please login to place an order"); return; }
     if (cartItems.length === 0) { toast.error("Your cart is empty"); return; }
-    if (!phoneVerified) { toast.error("Please verify your phone number with OTP"); return; }
 
     setIsSubmitting(true);
     setIsLoading(true);
@@ -599,12 +595,22 @@ export default function CheckoutPageContent() {
             <input className="w-full bg-transparent outline-none text-gray-800 text-sm" placeholder="Enter your full name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div className="rounded-xl border border-gray-200 p-3 bg-gray-50/50 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-50 transition-all">
-            <PhoneVerification
-              userId={user?.uid || ""}
-              initialPhone={phone}
-              onVerified={(p) => { setPhone(p); setPhoneVerified(true); }}
-              onPhoneChange={setPhone}
-            />
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5"><Phone className="w-3.5 h-3.5 inline mr-1" />Phone Number</label>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 text-sm font-medium">+91</span>
+              <input
+                className="flex-1 bg-transparent outline-none text-gray-800 text-sm"
+                placeholder="Enter your phone number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                type="tel"
+                inputMode="numeric"
+                required
+              />
+            </div>
+            {phone.length === 10 && !/^[6-9]/.test(phone) && (
+              <p className="text-xs text-red-500 mt-1">Phone must start with 6-9</p>
+            )}
           </div>
         </div>
         {deliveryOption === "delivery" && (
@@ -636,16 +642,6 @@ export default function CheckoutPageContent() {
                   </span>
                 </div>
               )}
-
-              <div className="mt-3">
-                <PincodeInput
-                  pincode={address.match(/\b\d{6}\b/)?.[0] || ""}
-                  onPincodeValidated={(v, local, cfg) => {
-                    setPincodeValidated(v.valid);
-                  }}
-                  disabled={isLoading}
-                />
-              </div>
 
               <AddressHistory
                 onSelect={(addr, lat, lng, label) => {

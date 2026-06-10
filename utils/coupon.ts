@@ -22,7 +22,8 @@ export interface ValidationResult {
 
 export async function validateCoupon(
   code: string,
-  orderValue: number
+  orderValue: number,
+  symbol: string = "\u20B9"
 ): Promise<ValidationResult> {
   try {
     const couponRef = doc(db, 'coupons', code.toUpperCase());
@@ -63,7 +64,7 @@ export async function validateCoupon(
     if (orderValue < coupon.minOrderAmount) {
       return {
         valid: false,
-        error: `Minimum order value of ₹${coupon.minOrderAmount} required`
+        error: `Minimum order value of ${symbol}${coupon.minOrderAmount} required`
       };
     }
 
@@ -82,7 +83,6 @@ export async function validateCoupon(
 
     return { valid: true, discount, coupon };
   } catch (error) {
-    console.error('Error validating coupon:', error);
     return { valid: false, error: 'Failed to validate coupon' };
   }
 }

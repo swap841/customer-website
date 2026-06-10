@@ -20,6 +20,7 @@ import {
   Package,
   Printer,
 } from "lucide-react";
+import { useContactInfo } from "@/hooks/useContactInfo";
 
 interface OrderItem {
   productId: string;
@@ -67,6 +68,8 @@ export default function OrderSuccessClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState(true);
+  const { contactInfo } = useContactInfo();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
 
   useEffect(() => {
     const auth = getAuth();
@@ -321,7 +324,7 @@ export default function OrderSuccessClient() {
                 <p className="text-xs uppercase tracking-[0.24em] text-gray-500 font-bold">Invoice</p>
                 <p className="text-lg font-bold text-gray-900 mt-3">{generateInvoiceNumber()}</p>
                 <p className="text-sm text-gray-500 mt-1">Total Amount</p>
-                <p className="text-3xl font-extrabold text-gray-900 mt-3">₹{order.totalAmount}</p>
+                <p className="text-3xl font-extrabold text-gray-900 mt-3">{symbol}{order.totalAmount}</p>
               </div>
             </div>
 
@@ -334,7 +337,7 @@ export default function OrderSuccessClient() {
                       <p className="font-semibold text-gray-900">{item.name}</p>
                       <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900">₹{item.price}</p>
+                    <p className="text-sm font-semibold text-gray-900">{symbol}{item.price}</p>
                   </div>
                 ))}
               </div>
@@ -343,24 +346,24 @@ export default function OrderSuccessClient() {
             <div className="mt-6 space-y-2 text-sm text-gray-600">
               <div className="flex justify-between">
                 <p>Subtotal</p>
-                <p>₹{order.subtotal}</p>
+                <p>{symbol}{order.subtotal}</p>
               </div>
               <div className="flex justify-between">
                 <p>Delivery Charge</p>
-                <p>₹{order.deliveryCharge}</p>
+                <p>{symbol}{order.deliveryCharge}</p>
               </div>
               <div className="flex justify-between">
                 <p>Handling Charge</p>
-                <p>₹{order.handlingCharge}</p>
+                <p>{symbol}{order.handlingCharge}</p>
               </div>
               <div className="flex justify-between">
                 <p>Small Cart Fee</p>
-                <p>₹{order.smallCartCharge}</p>
+                <p>{symbol}{order.smallCartCharge}</p>
               </div>
               {order.thirdPartyDeliveryCharge ? (
                 <div className="flex justify-between">
                   <p>Extended delivery fee</p>
-                  <p>₹{order.thirdPartyDeliveryCharge}</p>
+                  <p>{symbol}{order.thirdPartyDeliveryCharge}</p>
                 </div>
               ) : null}
             </div>

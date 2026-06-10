@@ -25,6 +25,7 @@ import {
   Bug,
   ShieldCheck,
 } from "lucide-react";
+import { useContactInfo } from "@/hooks/useContactInfo";
 
 
 const ORDER_STEPS = [
@@ -66,6 +67,8 @@ export default function OrderTrackingPage() {
   const [ticketLoading, setTicketLoading] = useState(true);
   const [ticketReplyText, setTicketReplyText] = useState("");
   const [ticketReplying, setTicketReplying] = useState(false);
+  const { contactInfo } = useContactInfo();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
 
   useEffect(() => {
     const auth = getAuth();
@@ -307,7 +310,7 @@ export default function OrderTrackingPage() {
                   <p className="text-sm font-semibold text-gray-900">{item.name}</p>
                   <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
                 </div>
-                <p className="text-sm font-bold text-gray-900">₹{item.price}</p>
+                <p className="text-sm font-bold text-gray-900">{symbol}{item.price}</p>
               </div>
             ))}
           </div>
@@ -315,7 +318,7 @@ export default function OrderTrackingPage() {
           <div className="mt-4 pt-3 border-t border-gray-100 space-y-1.5 text-sm">
             <div className="flex justify-between text-gray-500">
               <span>Total Amount</span>
-              <span className="font-bold text-gray-900">₹{order.totalAmount}</span>
+              <span className="font-bold text-gray-900">{symbol}{order.totalAmount}</span>
             </div>
             <div className="flex justify-between text-gray-500">
               <span>Payment</span>

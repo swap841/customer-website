@@ -28,6 +28,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useContactInfo } from "@/hooks/useContactInfo";
 
 interface Product {
   id: string;
@@ -70,6 +71,8 @@ function RatingStars({ average, count }: { average: number; count: number }) {
 
 export default function ProductDetailClient({ productId }: ProductDetailClientProps) {
   const router = useRouter();
+  const { contactInfo } = useContactInfo();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
   const { addToCart, updateQuantity, cartItems } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const { reviews } = useReviews(productId);
@@ -320,8 +323,8 @@ export default function ProductDetailClient({ productId }: ProductDetailClientPr
                 <div className="bg-gradient-to-r from-emerald-50/50 via-teal-50/20 to-transparent p-4 rounded-2xl border border-emerald-100/50 flex items-center justify-between">
                   <div className="space-y-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-black text-emerald-700">₹{product.price}</span>
-                      {mrp > product.price && <span className="text-base text-gray-400 line-through">₹{mrp}</span>}
+                      <span className="text-3xl font-black text-emerald-700">{symbol}{product.price}</span>
+                      {mrp > product.price && <span className="text-base text-gray-400 line-through">{symbol}{mrp}</span>}
                     </div>
                     {discountPercent > 0 && <p className="text-sm text-emerald-600">Save {discountPercent}% today</p>}
                   </div>

@@ -5,6 +5,7 @@ import { useCart } from "@/components/CartContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Percent, Minus, Plus, Trash2, ArrowLeft } from "lucide-react";
+import { useContactInfo } from "@/hooks/useContactInfo";
 
 const CartPage: React.FC = () => {
   const {
@@ -25,6 +26,8 @@ const CartPage: React.FC = () => {
   } = useCart();
 
   const router = useRouter();
+  const { contactInfo } = useContactInfo();
+  const symbol = contactInfo.currencySymbol || "\u20B9";
 
   const handleCheckout = () => {
     router.push("/checkout");
@@ -68,7 +71,7 @@ const CartPage: React.FC = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 truncate">{item.name}</h3>
-                  <p className="text-emerald-600 font-bold mt-1">₹{item.price}</p>
+                  <p className="text-emerald-600 font-bold mt-1">{symbol}{item.price}</p>
                   {item.weight != null && <p className="text-xs text-gray-400">{item.weight}{item.unit || "g"}</p>}
                   <div className="flex items-center gap-2 mt-2">
                     <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 border border-gray-200 rounded-full flex items-center justify-center hover:bg-emerald-50 transition"><Minus size={14} /></button>
@@ -105,25 +108,25 @@ const CartPage: React.FC = () => {
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-semibold">₹{subtotal}</span></div>
+              <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-semibold">{symbol}{subtotal}</span></div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Delivery</span>
                 {deliveryCharge === 0 ? (
                   <span className="text-blue-600 font-semibold">FREE</span>
-                ) : <span className="font-semibold">₹{deliveryCharge}</span>}
+                ) : <span className="font-semibold">{symbol}{deliveryCharge}</span>}
               </div>
-              <div className="flex justify-between"><span className="text-gray-600">Tax</span><span className="font-semibold">₹{taxAmount}</span></div>
+              <div className="flex justify-between"><span className="text-gray-600">Tax</span><span className="font-semibold">{symbol}{taxAmount}</span></div>
               {couponDiscount > 0 && (
-                <div className="flex justify-between text-emerald-600 font-semibold"><span>Coupon discount</span><span>-₹{couponDiscount}</span></div>
+                <div className="flex justify-between text-emerald-600 font-semibold"><span>Coupon discount</span><span>-{symbol}{couponDiscount}</span></div>
               )}
               <div className="border-t pt-3 mt-3">
-                <div className="flex justify-between font-bold text-lg"><span>Total</span><span className="text-emerald-600">₹{grandTotal}</span></div>
+                <div className="flex justify-between font-bold text-lg"><span>Total</span><span className="text-emerald-600">{symbol}{grandTotal}</span></div>
               </div>
             </div>
 
             <button onClick={handleCheckout}
               className="w-full mt-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-bold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-md">
-              PROCEED TO CHECKOUT — ₹{grandTotal}
+              PROCEED TO CHECKOUT — {symbol}{grandTotal}
             </button>
           </div>
         </div>
