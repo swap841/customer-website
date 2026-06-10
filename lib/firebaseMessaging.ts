@@ -67,9 +67,17 @@ export async function sendCheckoutOTP(phoneNumber: string, userId: string): Prom
       body: JSON.stringify({ phoneNumber, userId }),
     });
     const data = await response.json();
+    if (!data.success && data.error) {
+      // Map server error codes to user-friendly messages
+      const messages: Record<string, string> = {
+        NO_FCM_TOKEN: "Please allow browser notifications first. Click the lock icon in your address bar → Allow notifications, then try again.",
+        FCM_FAILED: "Could not send notification. Please check browser notification settings and try again.",
+      };
+      data.error = messages[data.code] || data.error;
+    }
     return data;
   } catch {
-    return { success: false, error: "Network error. Please check your connection." };
+    return { success: false, error: "Cannot reach server. Please check your internet connection." };
   }
 }
 
@@ -81,8 +89,18 @@ export async function verifyCheckoutOTP(phoneNumber: string, otp: string, userId
       body: JSON.stringify({ phoneNumber, otp, userId }),
     });
     const data = await response.json();
+    if (!data.success && data.error) {
+      const messages: Record<string, string> = {
+        OTP_NOT_FOUND: "OTP expired or not found. Please request a new OTP.",
+        OTP_EXPIRED: "OTP expired. Please request a new OTP.",
+        OTP_INCORRECT: data.error, // Keep server message (includes attempts remaining)
+        MAX_ATTEMPTS: "Too many wrong attempts. Please request a new OTP.",
+        USER_MISMATCH: "OTP was sent to a different account.",
+      };
+      data.error = messages[data.code] || data.error;
+    }
     return data;
   } catch {
-    return { success: false, error: "Network error. Please check your connection." };
+    return { success: false, error: "Cannot reach server. Please check your internet connection." };
   }
 }

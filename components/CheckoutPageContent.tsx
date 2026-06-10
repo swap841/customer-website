@@ -16,7 +16,7 @@ import DeliveryRadiusWarning from "./DeliveryRadiusWarning";
 import PermissionGate from "./PermissionGate";
 import PermissionDialog from "./PermissionDialog";
 import { toast } from "sonner";
-import type { DeliveryZoneInfo, PincodeValidation } from "@/lib/locationUtils";
+import type { DeliveryZoneInfo } from "@/lib/locationUtils";
 import {
   MapPin,
   Truck,
@@ -226,11 +226,8 @@ export default function CheckoutPageContent() {
     setDeliveryZone(data.zone);
   }, []);
 
-  const handlePincodeValidated = useCallback((validation: PincodeValidation) => {
+  const handlePincodeValidated = useCallback((validation: { valid: boolean; error?: string }) => {
     setPincodeValidated(validation.valid);
-    if (validation.valid && validation.city) {
-      // Auto-fill city from pincode if address is empty
-    }
   }, []);
 
   const saveUserProfile = async () => {
@@ -772,7 +769,6 @@ export default function CheckoutPageContent() {
               <AddressVerification
                 address={address}
                 onAddressChange={setAddress}
-                pincode={address.match(/\b\d{6}\b/)?.[0] || ""}
                 onPincodeValidated={handlePincodeValidated}
                 disabled={isLoading}
               />
