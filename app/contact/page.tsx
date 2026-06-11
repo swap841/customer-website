@@ -63,12 +63,12 @@ export default function ContactPage() {
     }
     setFormSubmitting(true);
     try {
+      await addDoc(collection(db, "contacts"), {
+        name: formName, email: formEmail, message: formMessage, createdAt: new Date(), read: false,
+      });
       await addDoc(collection(db, "queries"), {
         name: formName, email: formEmail, subject: formSubject || "General Inquiry", message: formMessage,
         createdAt: new Date(), status: "Unread",
-      });
-      await addDoc(collection(db, "contacts"), {
-        name: formName, email: formEmail, message: formMessage, createdAt: new Date(), read: false,
       });
       toast.success("Message sent successfully! We'll get back to you within 24 hours.");
       setFormName(""); setFormEmail(""); setFormSubject(""); setFormMessage("");
