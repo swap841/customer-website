@@ -178,7 +178,9 @@ export default async function Home() {
             <div className="flex gap-3">
               {topCategories.map((category) => {
                 const displayName = category.displayName || (category.name.charAt(0).toUpperCase() + category.name.slice(1));
-                const imgSrc = category.imageUrl || placeholderImages[category.name] || placeholderImages[displayName] || "";
+                const imgSrc = (category.imageUrl && !category.imageUrl.startsWith('/images/'))
+                  ? category.imageUrl
+                  : placeholderImages[category.name] || placeholderImages[displayName] || category.imageUrl || "";
                 return (
                   <Link key={category.id} href={`/products?category=${encodeURIComponent(category.id)}`}
                     className="group flex flex-col items-center gap-1 flex-shrink-0"

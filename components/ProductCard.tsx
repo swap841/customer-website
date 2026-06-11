@@ -117,12 +117,6 @@ export default function ProductCard({ product, stockOverride }: ProductCardProps
             </span>
           )}
 
-          {lowStock && (
-            <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
-              Only {effectiveStock} left
-            </span>
-          )}
-
           <button
             onClick={handleWishlist}
             aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
@@ -133,6 +127,12 @@ export default function ProductCard({ product, stockOverride }: ProductCardProps
               className={isWishlisted(product.id) ? "fill-red-500 text-red-500" : "text-slate-500"}
             />
           </button>
+
+          {lowStock && !outOfStock && (
+            <span className="absolute bottom-2 left-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md z-10">
+              Only {effectiveStock} left
+            </span>
+          )}
 
           {outOfStock && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
