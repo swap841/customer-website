@@ -12,6 +12,7 @@ import DynamicBranding from "@/components/DynamicBranding";
 import StoreStatusGate from "@/components/StoreStatusGate";
 import ChatBot from "@/components/ChatBot";
 import DynamicSEO from "@/components/DynamicSEO";
+import { fetchConfig } from "@/lib/configFetcher";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,19 +39,31 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const config = await fetchConfig();
+
+  const configScript = `
+    window.__APP_CONFIG__ = ${JSON.stringify(config)};
+  `;
+
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href={config.storeFavicon || "/favicon.ico"} />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#059669" />
+        <meta name="theme-color" content={config.primaryColor} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <script
+          id="__APP_CONFIG__"
+          dangerouslySetInnerHTML={{
+            __html: configScript,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `

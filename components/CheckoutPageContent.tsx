@@ -121,6 +121,7 @@ export default function CheckoutPageContent() {
   const [isThirdPartyDelivery, setIsThirdPartyDelivery] = useState(false);
   const [preferredSlot, setPreferredSlot] = useState<TimeSlot>("morning");
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
+  const [appCfg, setAppCfg] = useState<any>(null);
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZoneInfo | null>(null);
   const [pincodeValidated, setPincodeValidated] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
@@ -159,7 +160,10 @@ export default function CheckoutPageContent() {
   }, [auth, router]);
 
   useEffect(() => {
-    getAppConfig(true).then(cfg => setPaymentConfig(cfg.payment || {})).catch(() => {});
+    getAppConfig(true).then(cfg => {
+      setPaymentConfig(cfg.payment || {});
+      setAppCfg(cfg);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
