@@ -27,10 +27,11 @@ export default function AuthPage() {
       requestFcmToken(cred.user.uid).catch(() => {});
       router.push("/");
     } catch (err: unknown) {
-      const e = err as { code?: string };
-      console.error("[AUTH] Google sign-in error:", e.code, err);
+      const e = err as { code?: string; message?: string; customData?: unknown };
+      console.error("[AUTH] Google sign-in error:", e.code, e.message, JSON.stringify(e, Object.getOwnPropertyNames(e)), err);
       if (e.code !== "auth/popup-closed-by-user") {
-        toast.error(`Sign in failed: ${e.code || "unknown"}`);
+        const detail = e.message || JSON.stringify(e, Object.getOwnPropertyNames(e));
+        toast.error(`Sign in failed: ${e.code || "unknown"} — ${detail}`);
       }
     } finally {
       setLoading(false);
