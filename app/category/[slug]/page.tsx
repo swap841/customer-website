@@ -2,7 +2,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import Link from "next/link";
 import Image from "next/image";
-import ProductCard from "@/components/ProductCard";
+import ProductGrid from "@/components/ProductGrid";
 
 export const revalidate = 3600;
 
@@ -145,9 +145,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
             </div>
           ) : (
             <div className="grid gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+              <ProductGrid products={products} />
             </div>
           )}
         </div>

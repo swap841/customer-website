@@ -5,7 +5,7 @@ import { doc, getDoc, getDocs, query, where, documentId, collection } from "fire
 import { db } from "@/lib/firebaseClient";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useWishlist } from "@/hooks/useWishlist";
-import ProductCard from "@/components/ProductCard";
+import ProductGrid from "@/components/ProductGrid";
 import { Heart, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 interface Product { id: string; name: string; price: number; mrp?: number; imageUrl?: string; weight?: number; unit?: string; stock?: number; categoryId?: string; lowStockThreshold?: number; rating?: { average: number; count: number }; }
@@ -98,9 +98,7 @@ export default function WishlistPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            <ProductGrid products={products} />
           </div>
         )}
       </div>

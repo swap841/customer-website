@@ -135,12 +135,12 @@ export function useContactInfo() {
   const { data: contactInfo, isLoading } = useQuery({
     queryKey: ["contactInfo"],
     queryFn: async () => {
-      const cfg = await getAppConfig(true);
+      const cfg = await getAppConfig();
       return configToContactInfo(cfg);
     },
     staleTime: 5 * 60 * 1000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   return { contactInfo: contactInfo ?? DEFAULT_CONTACT_INFO, loading: isLoading };

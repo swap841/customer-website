@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import ProductCard from "@/components/ProductCard";
+import ProductGrid from "@/components/ProductGrid";
 import { Search, Loader2 } from "lucide-react";
 import { VoiceSearch } from "@/components/VoiceSearch";
 
@@ -185,9 +185,7 @@ export default function ProductsPageClient({
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          <ProductGrid products={filteredProducts} />
         </div>
       )}
 

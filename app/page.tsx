@@ -4,7 +4,7 @@ import { fetchConfig } from "@/lib/configFetcher";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
-import ProductCard from "@/components/ProductCard";
+import ProductGrid from "@/components/ProductGrid";
 import BannerCarousel from "@/components/BannerCarousel";
 import FreeDeliveryBar from "@/components/FreeDeliveryBar";
 
@@ -210,9 +210,7 @@ export default async function Home() {
           </div>
 
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            <ProductGrid products={products} />
           </div>
         </section>
 

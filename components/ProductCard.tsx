@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useCart } from "@/components/CartContext";
 import { useWishlist } from "@/hooks/useWishlist";
 import Link from "next/link";
@@ -8,8 +7,6 @@ import { Plus, Minus, Heart, Star, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { getAuth } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebaseClient";
 import { useContactInfo } from "@/hooks/useContactInfo";
 
 interface ProductCardProps {
@@ -27,6 +24,7 @@ interface ProductCardProps {
     lowStockThreshold?: number;
     rating?: { average: number; count: number };
   };
+  stockOverride?: number;
 }
 
 function Stars({ average }: { average: number }) {
@@ -43,7 +41,7 @@ function Stars({ average }: { average: number }) {
   );
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, stockOverride }: ProductCardProps) {
   const { addToCart, removeFromCart, updateQuantity, cartItems } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const { contactInfo } = useContactInfo();
@@ -52,19 +50,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const auth = getAuth();
   const user = auth.currentUser;
 
-  const [realStock, setRealStock] = useState<number | null>(null);
-
-  useEffect(() => {
-    const unsub = onSnapshot(
-      doc(db, "products", product.id),
-      (snap) => {
-        if (snap.exists()) setRealStock(snap.data().stock ?? 0);
-      }
-    );
-    return () => unsub();
-  }, [product.id]);
-
-  const effectiveStock = realStock ?? product.stock ?? 0;
+  const effectiveStock = stockOverride ?? product.stock ?? 0;
   const outOfStock = effectiveStock <= 0;
   const lowStock = effectiveStock > 0 && effectiveStock < 10;
 

@@ -1,5 +1,5 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, persistentLocalCache } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
@@ -21,7 +21,17 @@ for (const key of requiredKeys) {
 }
 
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig as any) : getApp();
-export const db = getFirestore(app);
+
+let firestoreInstance: ReturnType<typeof getFirestore>;
+try {
+  firestoreInstance = initializeFirestore(app, {
+    localCache: typeof window !== "undefined" ? persistentLocalCache({}) : undefined,
+  });
+} catch {
+  firestoreInstance = getFirestore(app);
+}
+export const db = firestoreInstance;
+
 export const storage = getStorage(app);
 export const auth = getAuth(app);
 
