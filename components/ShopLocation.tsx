@@ -1,10 +1,20 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { MapPin, Clock, Phone, Mail, Navigation, ExternalLink } from "lucide-react";
 import { useContactInfo } from "@/hooks/useContactInfo";
+import { getAppConfig } from "@/lib/appConfig";
 
 export default function ShopLocation() {
   const { contactInfo } = useContactInfo();
+  const [mapsKey, setMapsKey] = useState<string>("");
+
+  useEffect(() => {
+    getAppConfig().then(cfg => {
+      const key = cfg?.integrations?.googleMaps?.apiKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+      setMapsKey(key);
+    });
+  }, []);
 
   const hasCoords = contactInfo.warehouseLat && contactInfo.warehouseLng;
 
@@ -43,7 +53,7 @@ export default function ShopLocation() {
             className="relative h-48 bg-gray-100 dark:bg-zinc-800 rounded-xl overflow-hidden cursor-pointer group"
           >
             <img
-              src={`https://maps.googleapis.com/maps/api/staticmap?center=${contactInfo.warehouseLat},${contactInfo.warehouseLng}&zoom=15&size=600x200&markers=color:red%7C${contactInfo.warehouseLat},${contactInfo.warehouseLng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}`}
+              src={`https://maps.googleapis.com/maps/api/staticmap?center=${contactInfo.warehouseLat},${contactInfo.warehouseLng}&zoom=15&size=600x200&markers=color:red%7C${contactInfo.warehouseLat},${contactInfo.warehouseLng}&key=${mapsKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}`}
               alt="Shop location map"
               className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}

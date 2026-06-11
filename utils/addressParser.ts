@@ -16,9 +16,10 @@ export function extractPincodeFromAddress(address: string): string | null {
   return match ? match[0] : null;
 }
 
-export async function extractFullAddress(lat: number, lng: number): Promise<AddressComponents> {
+export async function extractFullAddress(lat: number, lng: number, mapsKey?: string): Promise<AddressComponents> {
+  const key = mapsKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const resp = await fetch(
-    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}`
+    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${key}`
   );
   const data = await resp.json();
   const result = data.results?.[0];

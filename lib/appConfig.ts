@@ -61,6 +61,11 @@ export interface AppConfig {
   ai?: {
     geminiApiKey?: string;
   };
+  integrations?: {
+    smtp?: { host?: string; port?: number; secure?: boolean; user?: string; pass?: string };
+    googleMaps?: { apiKey?: string };
+    sentry?: { dsn?: string };
+  };
   monitoring?: {
     sentryDsn?: string;
   };

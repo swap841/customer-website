@@ -79,16 +79,15 @@ export async function validatePincode(
     });
     return await res.json();
   } catch {
-    // Fallback client-side: basic 6-digit check
     return {
-      valid: /^\d{6}$/.test(pincode),
+      valid: false,
+      error: "Server unreachable — could not verify pincode",
       pincode,
       city: "",
       state: "",
       district: "",
       country: "India",
       area: "",
-      warning: "Offline validation",
     };
   }
 }
