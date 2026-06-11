@@ -28,8 +28,9 @@ export default function AuthPage() {
       router.push("/");
     } catch (err: unknown) {
       const e = err as { code?: string };
+      console.error("[AUTH] Google sign-in error:", e.code, err);
       if (e.code !== "auth/popup-closed-by-user") {
-        toast.error("Google sign in failed. Please try again.");
+        toast.error(`Sign in failed: ${e.code || "unknown"}`);
       }
     } finally {
       setLoading(false);
