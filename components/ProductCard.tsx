@@ -152,7 +152,7 @@ export default function ProductCard({ product, stockOverride }: ProductCardProps
             </div>
           )}
 
-          <h3 className="font-semibold text-slate-800 mb-1 line-clamp-1">{product.name}</h3>
+          <h3 className="font-semibold text-slate-800 mb-1 leading-tight">{product.name}</h3>
 
           {product.weight != null && (
             <p className="text-xs text-slate-400 mb-2">

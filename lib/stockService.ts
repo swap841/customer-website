@@ -28,9 +28,8 @@ export async function fetchBatchStock(productIds: string[]): Promise<Map<string,
       result.set(id, stock);
     }
   } catch {
-    for (const id of uncached) {
-      if (!result.has(id)) result.set(id, 0);
-    }
+    // Server unreachable (Render free tier cold start) — skip live stock,
+    // let ProductCard fall back to static Firestore stock value
   }
 
   return result;
