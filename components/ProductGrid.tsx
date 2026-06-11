@@ -23,7 +23,7 @@ export default function ProductGrid({ products }: { products: ProductData[] }) {
   const stockMap = useBatchStock(ids);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+    <>
       {products.map((product) => (
         <ProductCard
           key={product.id}
@@ -31,6 +31,6 @@ export default function ProductGrid({ products }: { products: ProductData[] }) {
           stockOverride={stockMap.get(product.id)}
         />
       ))}
-    </div>
+    </>
   );
 }
