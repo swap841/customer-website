@@ -426,6 +426,7 @@ export default function CheckoutPageContent() {
         userName: name || user.displayName || "",
         userPhone: phone || "",
         userEmail: user.email || "",
+        deliveryOption,
         items: orderItems,
         address: {
           name, phone,
