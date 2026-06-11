@@ -3,7 +3,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import ProductDetail from "@/components/ProductDetail";
 import { fetchConfig } from "@/lib/configFetcher";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 interface ProductData {
   id: string;

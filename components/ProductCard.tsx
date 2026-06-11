@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useCart } from "@/components/CartContext";
 import { useWishlist } from "@/hooks/useWishlist";
 import Link from "next/link";
@@ -7,6 +8,8 @@ import { Plus, Minus, Heart, Star, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { getAuth } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebaseClient";
 import { useContactInfo } from "@/hooks/useContactInfo";
 
 interface ProductCardProps {
@@ -45,6 +48,25 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { isWishlisted, toggleWishlist } = useWishlist();
   const { contactInfo } = useContactInfo();
   const symbol = contactInfo.currencySymbol || "\u20B9";
+
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  const [realStock, setRealStock] = useState<number | null>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, "products", product.id),
+      (snap) => {
+        if (snap.exists()) setRealStock(snap.data().stock ?? 0);
+      }
+    );
+    return () => unsub();
+  }, [product.id]);
+
+  const effectiveStock = realStock ?? product.stock ?? 0;
+  const outOfStock = effectiveStock <= 0;
+  const lowStock = effectiveStock > 0 && effectiveStock < 10;
 
   const cartItem = cartItems.find((item) => item.id === product.id);
   const quantity = cartItem?.quantity || 0;
@@ -85,8 +107,6 @@ export default function ProductCard({ product }: ProductCardProps) {
     toast.success(wasInWishlist ? "Removed from wishlist" : "Added to wishlist");
   };
 
-  const outOfStock = product.stock !== undefined && product.stock <= 0;
-
   return (
     <div className="stitch-card group cursor-pointer">
       <Link href={`/products/${product.id}`}>
@@ -111,9 +131,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             </span>
           )}
 
-          {!outOfStock && product.stock !== undefined && product.stock < 10 && product.stock > 0 && (
+          {lowStock && (
             <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
-              Only {product.stock} left
+              Only {effectiveStock} left
             </span>
           )}
 

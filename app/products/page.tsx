@@ -2,7 +2,7 @@ import { collection, getDocs, query, where, limit as fLimit } from "firebase/fir
 import { db } from "@/lib/firebaseClient";
 import ProductsPageClient from "@/components/ProductsPageClient";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 interface ProductData {
   id: string;
