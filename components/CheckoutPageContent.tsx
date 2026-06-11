@@ -6,7 +6,6 @@ import { useCart } from "./CartContext";
 import { getAuth } from "firebase/auth";
 import { getAreaCode, getAreaCodeFromAddress } from "../utils/getAreaCode";
 import { getDistanceKm } from "@/utils/distance";
-import { pincodeToCoords } from "@/lib/pincodeToCoords";
 import { doc, setDoc, writeBatch, increment, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { validateCoupon } from "../utils/coupon";
@@ -193,14 +192,7 @@ export default function CheckoutPageContent() {
 
   const handlePincodeValidated = useCallback((validation: { valid: boolean; error?: string }) => {
     setPincodeValidated(validation.valid);
-    if (validation.valid && !location) {
-      const pincode = address.match(/\b\d{6}\b/)?.[0];
-      if (pincode) {
-        const coords = pincodeToCoords(pincode);
-        setLocation({ lat: coords.lat, lng: coords.lng });
-      }
-    }
-  }, [address, location]);
+  }, []);
 
   const saveUserProfile = async () => {
     if (!user) return;
@@ -528,12 +520,7 @@ export default function CheckoutPageContent() {
     if (deliveryOption === "delivery") {
       if (!address) { toast.error("Please enter delivery address"); return; }
       if (!address.match(/\b\d{6}\b/)) { toast.error("Please include a 6-digit pincode in your address"); return; }
-      if (!location) {
-        const pincode = address.match(/\b\d{6}\b/)?.[0] || "";
-        const coords = pincodeToCoords(pincode);
-        setLocation({ lat: coords.lat, lng: coords.lng });
-        toast.info(`Location set to ${coords.city} (based on your pincode). Enable GPS for more precise delivery.`);
-      }
+      if (!location) { toast.error("Please set your delivery location using GPS or manual lat/lng entry"); return; }
     } else {
       setLocation({ lat: 0, lng: 0 });
       setAreaCode("PICKUP");

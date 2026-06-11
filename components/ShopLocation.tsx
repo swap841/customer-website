@@ -1,20 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { MapPin, Clock, Phone, Mail, Navigation, ExternalLink } from "lucide-react";
 import { useContactInfo } from "@/hooks/useContactInfo";
-import { getAppConfig } from "@/lib/appConfig";
 
 export default function ShopLocation() {
   const { contactInfo } = useContactInfo();
-  const [mapsKey, setMapsKey] = useState<string>("");
-
-  useEffect(() => {
-    getAppConfig().then(cfg => {
-      const key = cfg?.integrations?.googleMaps?.apiKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-      setMapsKey(key);
-    });
-  }, []);
 
   const hasCoords = contactInfo.warehouseLat && contactInfo.warehouseLng;
 
@@ -46,20 +36,20 @@ export default function ShopLocation() {
       <div className="space-y-3">
         <p className="text-sm text-gray-600 dark:text-zinc-400">{contactInfo.address}</p>
 
-        {/* Map preview - Click to Open */}
         {hasCoords && (
           <div
             onClick={openInGoogleMaps}
-            className="relative h-48 bg-gray-100 dark:bg-zinc-800 rounded-xl overflow-hidden cursor-pointer group"
+            className="relative h-48 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl overflow-hidden cursor-pointer group border border-emerald-200/50 dark:border-emerald-800/50"
           >
-            <img
-              src={`https://maps.googleapis.com/maps/api/staticmap?center=${contactInfo.warehouseLat},${contactInfo.warehouseLng}&zoom=15&size=600x200&markers=color:red%7C${contactInfo.warehouseLat},${contactInfo.warehouseLng}&key=${mapsKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}`}
-              alt="Shop location map"
-              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+              <MapPin className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mb-2" />
+              <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                {contactInfo.warehouseLat?.toFixed(4)}, {contactInfo.warehouseLng?.toFixed(4)}
+              </p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Tap to open in Google Maps</p>
+            </div>
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-              <span className="bg-white dark:bg-zinc-800 px-4 py-2 rounded-full text-sm font-semibold">Tap to open in Maps</span>
+              <span className="bg-white dark:bg-zinc-800 px-4 py-2 rounded-full text-sm font-semibold">Open in Maps</span>
             </div>
           </div>
         )}
@@ -82,7 +72,6 @@ export default function ShopLocation() {
         </div>
       </div>
 
-      {/* Contact Buttons */}
       <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4 flex flex-wrap gap-2">
         <a
           href={`tel:${contactInfo.phone.replace(/\s+/g, "")}`}
