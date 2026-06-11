@@ -26,6 +26,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useContactInfo } from "@/hooks/useContactInfo";
+import { canCancelOrder } from "@/lib/cancellationRules";
 
 
 const ORDER_STEPS = [
@@ -212,10 +213,18 @@ export default function OrderTrackingPage() {
             </div>
           )}
 
-          {!isCancelled && (currentStatus === "Pending" || currentStatus === "Packing") && (
+          {!isCancelled && (() => {
+            const createdDate = order.createdAt?.toDate ? order.createdAt.toDate() : order.createdAt?.seconds ? new Date(order.createdAt.seconds * 1000) : new Date(order.createdAt || Date.now());
+            const cancelCheck = canCancelOrder(currentStatus, createdDate);
+            if (!cancelCheck.allowed) return null;
+            return (
             <button
               onClick={async () => {
-                const confirmed = window.confirm("Are you sure you want to cancel this order? Your items will be restocked and a refund will be initiated if paid online.");
+                const isPaid = order.payment?.method === "online" || order.payment?.method === "razorpay";
+                const confirmMsg = isPaid
+                  ? "Are you sure you want to cancel this order? Refund will be processed within 5-7 business days."
+                  : "Are you sure you want to cancel this order? No payment will be deducted.";
+                const confirmed = window.confirm(confirmMsg);
                 if (!confirmed) return;
                 try {
                   const token = await getAuth().currentUser?.getIdToken();
@@ -241,7 +250,8 @@ export default function OrderTrackingPage() {
             >
               Cancel Order
             </button>
-          )}
+            );
+          })()}
         </div>
 
         {/* Verification Code Display */}

@@ -1,20 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "./CartContext";
 import { getAuth } from "firebase/auth";
 import { getAreaCode, getAreaCodeFromAddress } from "../utils/getAreaCode";
 import { getDistanceKm } from "@/utils/distance";
-import { doc, setDoc, collection, writeBatch, increment, serverTimestamp, getDoc } from "firebase/firestore";
+import { pincodeToCoords } from "@/lib/pincodeToCoords";
+import { doc, setDoc, writeBatch, increment, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { validateCoupon } from "../utils/coupon";
-import TimeSlotPicker, { type TimeSlot } from "./TimeSlotPicker";
+
 import LocationPicker from "./LocationPicker";
 import AddressVerification from "./AddressVerification";
 import DeliveryRadiusWarning from "./DeliveryRadiusWarning";
 import PermissionGate from "./PermissionGate";
-import PermissionDialog from "./PermissionDialog";
 import { toast } from "sonner";
 import type { DeliveryZoneInfo } from "@/lib/locationUtils";
 import {
@@ -25,16 +25,11 @@ import {
   Banknote,
   Loader2,
   ShieldCheck,
-  AlertTriangle,
   CheckCircle2,
-  Navigation,
   Phone,
-  Mail,
   User,
   Clock,
-  Shield,
 } from "lucide-react";
-import { requestFcmToken, sendCheckoutOTP, verifyCheckoutOTP } from "@/lib/firebaseMessaging";
 import { calculateDeliveryTime, calculateDistance } from "@/lib/deliveryTimeUtils";
 
 import { useContactInfo } from "@/hooks/useContactInfo";
@@ -119,22 +114,12 @@ export default function CheckoutPageContent() {
   const [deliveryOption, setDeliveryOption] = useState<"delivery" | "pickup">("delivery");
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [isThirdPartyDelivery, setIsThirdPartyDelivery] = useState(false);
-  const [preferredSlot, setPreferredSlot] = useState<TimeSlot>("morning");
+
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
   const [appCfg, setAppCfg] = useState<any>(null);
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZoneInfo | null>(null);
   const [pincodeValidated, setPincodeValidated] = useState(false);
-  const [permissionsGranted, setPermissionsGranted] = useState(false);
-  const [showPermissionGate, setShowPermissionGate] = useState(false);
-  const [showNotificationDialog, setShowNotificationDialog] = useState(false);
   const { savedAddress, saveAddress, clearAddress } = useAddress();
-
-  const [otpStep, setOtpStep] = useState<"idle" | "sending" | "input" | "verifying" | "verified" | "failed">("idle");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [otpAttempts, setOtpAttempts] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [otpCountdown, setOtpCountdown] = useState(0);
 
   const effectiveDeliveryFee = deliveryOption === "delivery" ? (subtotal >= FREE_DELIVERY_ABOVE ? 0 : deliveryCharge) : 0;
   const taxAmount = Math.round((subtotal * TAX_PERCENT) / 100);
@@ -181,30 +166,6 @@ export default function CheckoutPageContent() {
     }
   }, [deliveryOption, cartItems]);
 
-  useEffect(() => {
-    if (otpStep === "sending" && user && phone) {
-      const requestOTP = async () => {
-        const cleanPhoneForOTP = phone.replace(/\s/g, "").replace(/^\+91/, "").replace(/^91/, "");
-        const result = await sendCheckoutOTP(cleanPhoneForOTP, user.uid);
-        if (result.success) {
-          setOtpStep("input");
-          setOtpCountdown(60);
-        } else {
-          setOtpStep("failed");
-          setOtpError(result.error || "Failed to send OTP");
-        }
-      };
-      requestOTP();
-    }
-  }, [otpStep, user, phone]);
-
-  useEffect(() => {
-    if (otpCountdown > 0) {
-      timerRef.current = setTimeout(() => setOtpCountdown(prev => prev - 1), 1000);
-    }
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [otpCountdown]);
-
   const checkDistance = useCallback((lat: number, lng: number) => {
     const dist = getDistanceKm(STORE_LAT, STORE_LNG, lat, lng);
     setDistanceKm(Math.round(dist * 10) / 10);
@@ -232,7 +193,14 @@ export default function CheckoutPageContent() {
 
   const handlePincodeValidated = useCallback((validation: { valid: boolean; error?: string }) => {
     setPincodeValidated(validation.valid);
-  }, []);
+    if (validation.valid && !location) {
+      const pincode = address.match(/\b\d{6}\b/)?.[0];
+      if (pincode) {
+        const coords = pincodeToCoords(pincode);
+        setLocation({ lat: coords.lat, lng: coords.lng });
+      }
+    }
+  }, [address, location]);
 
   const saveUserProfile = async () => {
     if (!user) return;
@@ -252,199 +220,117 @@ export default function CheckoutPageContent() {
         email: user.email,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
-    } catch (error) {
-      // Profile update error handled silently
-    }
+    } catch (error) {}
   };
 
   const applyCouponCode = async () => {
     const code = couponCode.trim();
     if (!code) { setCouponMessage("Enter a coupon code to apply"); return; }
-    if (couponLoading) return;
     setCouponLoading(true);
     setCouponMessage(null);
     try {
-      const result = await validateCoupon(code, baseTotal);
-      if (!result.valid) {
-        setCouponDiscount(0);
-        setCouponMessage(result.error || "Coupon could not be applied");
+      const result = await validateCoupon(code, subtotal);
+      if (result.valid && result.discount) {
+        setCouponDiscount(result.discount);
+        setCouponMessage(`Coupon applied! You saved ${symbol}${result.discount}`);
       } else {
-        setCouponDiscount(result.discount || 0);
-        setCouponMessage(`Coupon applied! Discount ${symbol}${result.discount?.toFixed(0)}`);
+        setCouponDiscount(0);
+        setCouponMessage(result.error || "Invalid or expired coupon");
       }
-    } catch {
-      setCouponDiscount(0);
-      setCouponMessage("Failed to validate coupon. Please try again.");
-    } finally {
-      setCouponLoading(false);
+    } catch { setCouponMessage("Error validating coupon"); }
+    finally { setCouponLoading(false); }
+  };
+
+  const handleRazorpayPayment = async (orderData: Record<string, unknown>) => {
+    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "https://grocery-server-u2qq.onrender.com";
+    const rzpKeyId = paymentConfig?.razorpayKeyId || "";
+    if (!rzpKeyId) {
+      toast.error("Online payment not configured. Please use Cash on Delivery.");
+      return;
     }
-  };
 
-  const saveOrderToFirestore = async (orderData: Record<string, unknown>) => {
-    if (!user) return null;
-    try {
-      const ordersRef = doc(collection(db, "users", user.uid, "orders"));
-      const orderId = ordersRef.id;
-      const orderPayload = {
-        ...orderData,
-        id: orderId,
-        userId: user.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      const batch = writeBatch(db);
-      batch.set(doc(db, "orders", orderId), orderPayload);
-      batch.set(doc(db, "users", user.uid, "orders", orderId), orderPayload);
-      await batch.commit();
-      return orderId;
-    } catch (error) {
-      // Order save error handled silently
-      return null;
-    }
-  };
-
-  const loadRazorpayScript = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (typeof window !== "undefined" && window.Razorpay) { resolve(true); return; }
-      if (razorpayScriptFailed) { resolve(false); return; }
-      if (razorpayScriptLoaded) { resolve(false); return; }
-      razorpayScriptLoaded = true;
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => { razorpayScriptFailed = true; resolve(false); };
-      document.body.appendChild(script);
-    });
-  };
-
-  const handleRazorpayPayment = async (orderData: Record<string, unknown>): Promise<void> => {
-    const toastId = toast.loading("Initializing payment...");
+    setIsSubmitting(true);
+    const toastId = toast.loading("Initiating payment...");
 
     try {
-      if (!user) {
+      let resp, data;
+      try {
+        const orderRes = await fetch(`${SERVER_URL}/api/create-razorpay-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: finalTotal,
+            currency: "INR",
+            userId: user!.uid,
+            receipt: `receipt_${Date.now()}`,
+          }),
+        });
+        if (!orderRes.ok) throw new Error("Failed to create order");
+        resp = orderRes;
+        data = await resp.json();
+      } catch {
         toast.dismiss(toastId);
-        toast.error("Please login to continue.");
-        setIsLoading(false);
+        toast.error("Payment server unavailable. Please use Cash on Delivery.");
         setIsSubmitting(false);
         return;
       }
 
-      const res = await fetch(`${EXPRESS_URL}/api/razorpay/create-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: finalTotal, receipt: `receipt_${Date.now()}` }),
-      });
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
+      if (!data || !data.id) {
         toast.dismiss(toastId);
-        toast.error(data.error || "Failed to create payment order");
-        setIsLoading(false);
+        toast.error("Payment initialization failed. Please use Cash on Delivery.");
         setIsSubmitting(false);
         return;
       }
 
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
+      if (razorpayScriptFailed) {
         toast.dismiss(toastId);
-        toast.error("Failed to load payment gateway.");
-        setIsLoading(false);
+        toast.error("Payment system unavailable. Please use Cash on Delivery.");
         setIsSubmitting(false);
         return;
       }
 
-      toast.dismiss(toastId);
-      const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-      if (!razorpayKeyId) {
-        toast.error("Payment gateway not configured.");
-        setIsLoading(false);
-        setIsSubmitting(false);
-        return;
+      if (!razorpayScriptLoaded) {
+        razorpayScriptLoaded = true;
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = () => { razorpayScriptFailed = true; reject(); };
+          document.body.appendChild(script);
+        });
       }
 
-      const options: RazorpayOptions = {
-        key: razorpayKeyId,
+      const rzp = new window.Razorpay({
+        key: rzpKeyId,
         amount: Math.round(finalTotal * 100),
         currency: "INR",
-        name: contactInfo.storeName || "My Store Grocery",
-        description: `Order of ${cartItems.length} item(s)`,
-        order_id: data.orderId,
-        handler: async (response: RazorpayResponse) => {
-          const paymentToastId = toast.loading("Verifying payment...");
-          try {
-            const verifyRes = await fetch(`${EXPRESS_URL}/api/razorpay/verify-payment`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                userId: user?.uid,
-                orderData,
-                couponCode: couponDiscount > 0 ? couponCode : null,
-              }),
-            });
-            const verifyData = await verifyRes.json();
-            if (!verifyRes.ok || !verifyData.success) {
-              toast.dismiss(paymentToastId);
-              toast.error("Payment verification failed.");
-              setIsSubmitting(false);
-              setIsLoading(false);
-              return;
-            }
-
-            if (verifyData.orderId) {
-              if (address && deliveryOption === "delivery") {
-                saveAddress(address, location?.lat, location?.lng);
-              }
-              toast.dismiss(paymentToastId);
-              toast.success("Payment successful! Order placed.");
-              if (clearCart) clearCart();
-              router.push(`/order-success?orderId=${verifyData.orderId}`);
-            } else {
-              const fallbackId = await saveOrderToFirestore(orderData);
-              toast.dismiss(paymentToastId);
-              if (fallbackId) {
-                toast.success("Order saved locally.");
-                router.push(`/order-success?orderId=${fallbackId}`);
-              } else {
-                setIsSubmitting(false);
-                setIsLoading(false);
-                toast.error("Payment received but order saving failed.");
-              }
-            }
-          } catch (error) {
-            // Payment verification error handled silently
-            toast.dismiss(paymentToastId);
-            toast.error("An error occurred after payment.");
-            setIsLoading(false);
-            setIsSubmitting(false);
-          }
+        name: "My Store Grocery",
+        description: `Order Payment - INR ${finalTotal}`,
+        order_id: data.id,
+        handler: function (response: RazorpayResponse) {
+          toast.dismiss(toastId);
+          orderData.razorpay_payment_id = response.razorpay_payment_id;
+          orderData.razorpay_order_id = response.razorpay_order_id;
+          orderData.razorpay_signature = response.razorpay_signature;
+          orderData.payment = { method: "razorpay", status: "paid", ...response };
+          orderData.paymentMethod = "razorpay";
+          toast.success("Payment successful! Placing your order...");
+          saveOrderToFirestore(orderData);
         },
-        prefill: { name, email: user?.email || "", contact: phone },
-        theme: { color: "#10b981" },
+        prefill: { name: name || user?.displayName || "", email: user?.email || "", contact: phone || "" },
+        theme: { color: "#059669" },
         modal: {
           ondismiss: () => {
-            toast.error("Payment cancelled.");
             document.body.style.overflow = "";
             document.documentElement.style.overflow = "";
             setIsLoading(false);
             setIsSubmitting(false);
           },
         },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", () => {
-        toast.error("Payment failed.");
-        document.body.style.overflow = "";
-        document.documentElement.style.overflow = "";
-        setIsLoading(false);
-        setIsSubmitting(false);
       });
       rzp.open();
     } catch (error) {
-      // Razorpay error handled silently
       toast.dismiss(toastId);
       toast.error("Payment initialization failed.");
       setIsLoading(false);
@@ -452,38 +338,42 @@ export default function CheckoutPageContent() {
     }
   };
 
-  const handleVerifyOTP = async () => {
-    if (!user || !phone || otpCode.length !== 4) return;
-    
-    setOtpStep("verifying");
-    setOtpError(null);
-    
-    const cleanPhoneForVerify = phone.replace(/\s/g, "").replace(/^\+91/, "").replace(/^91/, "");
-    const result = await verifyCheckoutOTP(cleanPhoneForVerify, otpCode, user.uid);
-    
-    if (result.success) {
-      setOtpStep("verified");
-      setTimeout(() => {
-        proceedWithOrder();
-      }, 500);
-    } else {
-      setOtpAttempts(prev => prev + 1);
-      setOtpStep("input");
-      setOtpError(result.error || "OTP verification failed");
-      setOtpCode("");
-      
-      if (otpAttempts >= 2) {
-        setOtpError("Too many failed attempts. Please check your phone number.");
-      }
-    }
-  };
+  const saveOrderToFirestore = async (orderData: Record<string, unknown>) => {
+    try {
+      const batch = writeBatch(db);
+      const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const finalOrderData = {
+        ...orderData,
+        id: orderId,
+        status: "Pending",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      batch.set(doc(db, "orders", orderId), finalOrderData);
+      batch.set(doc(db, "users", user!.uid, "orders", orderId), finalOrderData);
 
-  const handleResendOTP = async () => {
-    if (!user || !phone) return;
-    setOtpStep("sending");
-    setOtpCode("");
-    setOtpError(null);
-    setOtpAttempts(0);
+      if (orderData.items && Array.isArray(orderData.items)) {
+        for (const item of orderData.items) {
+          if (item.productId) {
+            batch.update(doc(db, "products", item.productId), { stock: increment(-(item.quantity || 1)) });
+          }
+        }
+      }
+
+      if (couponDiscount > 0 && couponCode) {
+        batch.update(doc(db, "coupons", couponCode.toUpperCase()), { usedCount: increment(1) });
+      }
+
+      await batch.commit();
+      if (address && deliveryOption === "delivery") saveAddress(address, location?.lat, location?.lng);
+      toast.success("Order placed successfully!");
+      if (clearCart) clearCart();
+      router.push(`/order-success?orderId=${orderId}`);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to place order. Please try again.");
+      setIsSubmitting(false);
+      setIsLoading(false);
+    }
   };
 
   const proceedWithOrder = async () => {
@@ -576,7 +466,6 @@ export default function CheckoutPageContent() {
         createdAt: now,
         rejectionHistory: [],
         couponApplied: couponDiscount > 0 ? couponCode : null,
-        deliveryTimeSlot: preferredSlot,
         phoneVerified: true,
       };
 
@@ -625,38 +514,11 @@ export default function CheckoutPageContent() {
     } finally {
       setIsSubmitting(false);
       setIsLoading(false);
-      setOtpStep("idle");
     }
   };
 
   const placeOrder = async () => {
     if (isSubmitting) return;
-
-    // Check permissions before placing order
-    if (deliveryOption === "delivery") {
-      const locPermission = await navigator.permissions.query({ name: "geolocation" }).catch(() => ({ state: "prompt" }));
-      const notifPermission = typeof Notification !== "undefined" ? Notification.permission : "granted";
-      
-      if (locPermission.state !== "granted") {
-        setShowPermissionGate(true);
-        setIsSubmitting(false);
-        setIsLoading(false);
-        return;
-      }
-      if (notifPermission !== "granted") {
-        setShowPermissionGate(true);
-        setIsSubmitting(false);
-        setIsLoading(false);
-        return;
-      }
-    }
-
-    // Check notification permission
-    if (typeof Notification !== "undefined" && Notification.permission === "default") {
-      setShowNotificationDialog(true);
-      setIsSubmitting(false);
-      return;
-    }
 
     if (!name || name.trim().length < 2) { toast.error("Please enter your full name"); return; }
     if (!phone) { toast.error("Please enter your phone number"); return; }
@@ -664,9 +526,14 @@ export default function CheckoutPageContent() {
     const cleanPhone = phone.replace(/\s/g, "").replace(/^\+91/, "").replace(/^91/, "");
     if (!phoneRegex.test(cleanPhone)) { toast.error("Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"); setIsSubmitting(false); return; }
     if (deliveryOption === "delivery") {
-      if (!location) { toast.error("Please set your delivery location"); return; }
       if (!address) { toast.error("Please enter delivery address"); return; }
       if (!address.match(/\b\d{6}\b/)) { toast.error("Please include a 6-digit pincode in your address"); return; }
+      if (!location) {
+        const pincode = address.match(/\b\d{6}\b/)?.[0] || "";
+        const coords = pincodeToCoords(pincode);
+        setLocation({ lat: coords.lat, lng: coords.lng });
+        toast.info(`Location set to ${coords.city} (based on your pincode). Enable GPS for more precise delivery.`);
+      }
     } else {
       setLocation({ lat: 0, lng: 0 });
       setAreaCode("PICKUP");
@@ -676,17 +543,7 @@ export default function CheckoutPageContent() {
     if (finalTotal <= 0) { toast.error("Total must be greater than zero"); return; }
 
     setIsSubmitting(true);
-
-    try {
-      await requestFcmToken(user.uid);
-      setOtpStep("sending");
-      setOtpError(null);
-      setOtpAttempts(0);
-      setOtpCode("");
-    } catch (err) {
-      toast.error("Failed to initiate verification. Please try again.");
-      setIsSubmitting(false);
-    }
+    await proceedWithOrder();
   };
 
   return (
@@ -807,277 +664,110 @@ export default function CheckoutPageContent() {
                   {(() => {
                     const storeLat = contactInfo.warehouseLat || STORE_LAT_DEFAULT;
                     const storeLng = contactInfo.warehouseLng || STORE_LNG_DEFAULT;
-                    const dist = calculateDistance(storeLat, storeLng, location.lat, location.lng);
-                    const estimate = calculateDeliveryTime(dist, storeLat, storeLng);
-                    return estimate ? (
-                      <div className={`p-3 rounded-xl text-sm font-medium ${estimate.isOutOfRadius ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
-                        🚚 Estimated delivery: {estimate.display}
-                        {estimate.isOutOfRadius && (
-                          <p className="text-xs mt-1">This order will be dispatched via delivery partner.</p>
-                        )}
+                    const dist_km = calculateDistance(location.lat, location.lng, storeLat, storeLng);
+                    const eta = calculateDeliveryTime(dist_km, storeLat, storeLng, {
+                      speedKmh: contactInfo.deliverySpeedKmph || 25,
+                      trafficMultiplier: contactInfo.trafficMultiplier || 1.5,
+                      handlingTimeHours: contactInfo.handlingTimeHours || 1,
+                    });
+                    return (
+                      <div className="bg-teal-50 rounded-xl p-3 border border-teal-200">
+                        <div className="flex items-center gap-2 text-teal-800 text-xs font-semibold">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Estimated delivery: {eta.display}</span>
+                        </div>
                       </div>
-                    ) : null;
+                    );
                   })()}
                 </div>
               )}
-            </>
-          )}
-          {deliveryOption === "pickup" && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-              <div className="flex items-start">
-                <div className="bg-blue-100 p-2 rounded-lg mr-3"><Store className="w-5 h-5 text-blue-600" /></div>
-                <div>
-                  <h3 className="font-semibold text-blue-800">Store Pickup Information</h3>
+
+              {contactInfo.address && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <h3 className="font-bold text-sm text-blue-800">Store Pickup Option</h3>
+                  <p className="text-xs text-blue-600 mt-1">
+                    You can also choose &quot;Store Pickup&quot; above to collect your order from our store.
+                  </p>
                   <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactInfo.address || "Store address not set")}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 text-sm mt-1 flex items-center gap-1 hover:underline"><MapPin className="w-3.5 h-3.5" /> {contactInfo.address || "Store address not set"}</a>
                   <p className="text-blue-600 text-sm mt-2 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Pickup Hours: {contactInfo.pickupHours || "9:00 AM - 9:00 PM"}</p>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
+            </>
+        )}
       </div>
 
+      {/* Coupon Code Section */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
-        <h2 className="font-bold text-lg mb-4 text-gray-800">Bill Summary</h2>
-        <div className="space-y-3">
-          <div className="flex justify-between py-2"><span className="text-gray-600">Items total ({cartItems.length} items)</span><span className="font-medium">{symbol}{subtotal}</span></div>
-          {deliveryOption === "delivery" && (
-            <div className="flex justify-between py-2">
-              <span className="text-gray-600">Delivery</span>
-              <span className="font-medium">{effectiveDeliveryFee === 0 ? <span className="text-blue-600 font-semibold">FREE</span> : `${symbol}${effectiveDeliveryFee}`}</span>
-            </div>
-          )}
-          <div className="flex justify-between py-2"><span className="text-gray-600">Tax</span><span className="font-medium">{symbol}{taxAmount}</span></div>
-          {isThirdPartyDelivery && deliveryOption === "delivery" && (
-            <div className="flex justify-between py-2 text-amber-700"><span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> Extended distance fee</span><span className="font-medium">{symbol}{THIRD_PARTY_DELIVERY_CHARGE}</span></div>
-          )}
-          {couponDiscount > 0 && (
-            <div className="flex justify-between py-2 text-emerald-600 font-semibold"><span>Coupon discount</span><span>-{symbol}{couponDiscount}</span></div>
-          )}
-          <div className="border-t pt-3 mt-2">
-            <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span className="text-emerald-600">{symbol}{finalTotal}</span></div>
-          </div>
-          {deliveryOption === "delivery" && totalSavings > 0 && (
-            <div className="bg-emerald-50 rounded-xl p-3 mt-3">
-              <p className="text-emerald-700 text-sm flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> You saved {symbol}{totalSavings} on delivery!</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {deliveryOption === "delivery" && (
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
-          <h2 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2"><Clock className="w-5 h-5 text-emerald-600" /> Delivery Time Slot</h2>
-          <TimeSlotPicker selectedSlot={preferredSlot} onSelectSlot={setPreferredSlot} />
-        </div>
-      )}
-
-      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
-        <h2 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2"><CreditCard className="w-5 h-5 text-emerald-600" /> Payment Method</h2>
-        <div className="space-y-3">
-          {paymentConfig?.codEnabled !== false && (
-            <div
-              className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${paymentMethod === "COD" ? "border-emerald-500 bg-emerald-50 shadow-md" : "border-gray-300 hover:bg-gray-50"}`}
-              onClick={() => setPaymentMethod("COD")}
-            >
-              <label className="flex items-center cursor-pointer">
-                <input type="radio" className="h-5 w-5 text-emerald-600 accent-emerald-600" checked={paymentMethod === "COD"} onChange={() => setPaymentMethod("COD")} />
-                <div className="ml-3">
-                  <span className="text-gray-800 font-medium flex items-center gap-2">
-                    <Banknote className="w-5 h-5 text-emerald-600" /> Cash on Delivery
-                  </span>
-                  <p className="text-xs text-gray-500 mt-1">Pay when you receive your order</p>
-                </div>
-              </label>
-            </div>
-          )}
-          {paymentConfig?.razorpayEnabled && paymentConfig?.razorpayKeyId && (
-            <div
-              className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${paymentMethod === "Online" ? "border-emerald-500 bg-emerald-50 shadow-md" : "border-gray-300 hover:bg-gray-50"}`}
-              onClick={() => setPaymentMethod("Online")}
-            >
-              <label className="flex items-center cursor-pointer">
-                <input type="radio" className="h-5 w-5 text-emerald-600 accent-emerald-600" checked={paymentMethod === "Online"} onChange={() => setPaymentMethod("Online")} />
-                <div className="ml-3">
-                  <span className="text-gray-800 font-medium flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-emerald-600" /> Pay Online (Razorpay)
-                  </span>
-                  <p className="text-xs text-gray-500 mt-1">UPI, Cards, Netbanking</p>
-                </div>
-              </label>
-            </div>
-          )}
-          {paymentConfig && paymentConfig?.codEnabled === false && !(paymentConfig?.razorpayEnabled && paymentConfig?.razorpayKeyId) && (
-            <div className="rounded-xl border-2 border-gray-300 p-4 bg-gray-50">
-              <p className="text-gray-500 text-sm text-center">No payment methods available</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
-        <h2 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2"><Clock className="w-5 h-5 text-emerald-600" /> Promo Code</h2>
-        <div className="flex flex-col gap-3 md:flex-row">
-          <input type="text" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="Enter coupon code"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-emerald-500 focus:outline-none" />
-          <button type="button" onClick={applyCouponCode} disabled={couponLoading}
-            className="rounded-xl bg-emerald-600 text-white px-4 py-3 font-semibold shadow-sm hover:bg-emerald-700 disabled:opacity-50">
-            {couponLoading ? "Applying..." : "Apply"}
+        <h2 className="font-bold text-lg mb-4 text-gray-800">Coupon Code</h2>
+        <div className="flex gap-2">
+          <input type="text" placeholder="Enter coupon code" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} className="flex-1 px-3 py-2 border text-sm border-gray-200 rounded-xl outline-none focus:border-emerald-500" />
+          <button onClick={applyCouponCode} disabled={couponLoading || !couponCode.trim()} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50">
+            {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
           </button>
         </div>
-        {couponMessage && <p className="mt-3 text-sm text-gray-700">{couponMessage}</p>}
-        {couponDiscount > 0 && <p className="mt-2 text-sm text-emerald-700">Discount applied: {symbol}{couponDiscount.toFixed(0)}</p>}
+        {couponMessage && <p className="text-xs mt-1 text-gray-500">{couponMessage}</p>}
       </div>
 
-      <button onClick={placeOrder} disabled={isLoading || isSubmitting || (paymentMethod === "COD" && paymentConfig?.codEnabled === false) || (paymentMethod === "Online" && (!paymentConfig?.razorpayEnabled || !paymentConfig?.razorpayKeyId))}
-        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-        {isLoading ? (
-          <><Loader2 className="w-5 h-5 animate-spin" /> {paymentMethod === "Online" ? "Opening Payment Gateway..." : "Placing Order..."}</>
-        ) : (
-          <>{paymentMethod === "Online" ? `Pay ${symbol}${finalTotal} with Razorpay` : `Place Order - ${symbol}${finalTotal}`}</>
+      {/* Payment Method */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
+        <h2 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2"><CreditCard className="w-5 h-5 text-emerald-600" /> Payment Method</h2>
+        <div className="flex flex-wrap gap-3">
+          {[["COD", "Cash on Delivery"], ["Online", "Pay Online (UPI/Card/Wallet)"]].map(([value, label]) => (
+            <button key={value} onClick={() => setPaymentMethod(value)}
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm transition-all ${
+                paymentMethod === value ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              {value === "COD" ? <Banknote className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+              {label}
+            </button>
+          ))}
+        </div>
+        {paymentMethod === "Online" && !paymentConfig?.razorpayKeyId && (
+          <p className="text-xs text-amber-600 mt-2">Online payment not configured. Select Cash on Delivery to proceed.</p>
         )}
-      </button>
-      {showPermissionGate && (
-  <PermissionGate
-    onGranted={() => { setPermissionsGranted(true); setShowPermissionGate(false); }}
-    onClose={() => { setShowPermissionGate(false); setIsSubmitting(false); }}
-  />
-)}
+      </div>
 
-      <PermissionDialog
-        isOpen={showNotificationDialog}
-        onClose={() => { setShowNotificationDialog(false); setIsSubmitting(false); }}
-        onConfirm={async () => {
-          const result = await Notification.requestPermission();
-          setShowNotificationDialog(false);
-          if (result === "granted") {
-            await requestFcmToken(user!.uid);
-          }
-          // Proceed with order regardless
-          setOtpStep("sending");
-        }}
-        title="Get Delivery Updates?"
-        message="We'll notify you when your order is confirmed, out for delivery, and delivered."
-        icon="notification"
-        confirmText="Enable Notifications"
-        cancelText="Skip"
-      />
-
-      {otpStep !== "idle" && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
-            {otpStep === "sending" && (
-              <div className="text-center">
-                <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto mb-3" />
-                <h2 className="text-lg font-bold text-gray-900">Sending OTP</h2>
-                <p className="text-sm text-gray-500 mt-1">Sending verification code to +91 {phone}</p>
-                <p className="text-xs text-gray-400 mt-2">You&apos;ll receive a notification with the code</p>
-              </div>
-            )}
-            
-            {otpStep === "input" && (
-              <div>
-                <div className="text-center mb-4">
-                  <Shield className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
-                  <h2 className="text-lg font-bold text-gray-900">Verify Your Phone</h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Enter the 4-digit code sent to +91 {phone}
-                  </p>
-                  <div className="mt-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200">
-                    <p className="text-xs text-emerald-700 font-medium">
-                      📱 Check your browser notifications for the OTP code
-                    </p>
-                    <p className="text-[10px] text-emerald-600 mt-1">
-                      Look for a notification pop-up on your screen
-                    </p>
-                  </div>
-                </div>
-                
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={4}
-                  value={otpCode}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-                    setOtpCode(val);
-                    setOtpError(null);
-                  }}
-                  placeholder="0000"
-                  autoFocus
-                  className="w-full text-center text-2xl tracking-[0.5em] font-mono py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 mb-3"
-                />
-                
-                {otpError && (
-                  <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg mb-3">
-                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-                    <p className="text-xs text-red-600">{otpError}</p>
-                  </div>
-                )}
-                
-                <div className="flex items-center justify-between mb-4">
-                  <button
-                    onClick={handleResendOTP}
-                    disabled={otpCountdown > 0}
-                    className="text-sm text-emerald-600 disabled:text-gray-400 font-semibold"
-                  >
-                    {otpCountdown > 0 ? `Resend in ${otpCountdown}s` : "Resend OTP"}
-                  </button>
-                  <span className="text-xs text-gray-400">{otpAttempts}/3 attempts</span>
-                </div>
-                
-                <button
-                  onClick={handleVerifyOTP}
-                  disabled={otpCode.length !== 4 || otpAttempts >= 3}
-                  className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Verify & Place Order
-                </button>
-              </div>
-            )}
-            
-            {otpStep === "verifying" && (
-              <div className="text-center">
-                <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto mb-3" />
-                <h2 className="text-lg font-bold text-gray-900">Verifying OTP</h2>
-                <p className="text-sm text-gray-500 mt-1">Please wait...</p>
-              </div>
-            )}
-            
-            {otpStep === "verified" && (
-              <div className="text-center">
-                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-                <h2 className="text-lg font-bold text-gray-900">Verified!</h2>
-                <p className="text-sm text-gray-500 mt-1">Placing your order...</p>
-              </div>
-            )}
-            
-            {otpStep === "failed" && (
-              <div>
-                <div className="text-center mb-4">
-                  <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-2" />
-                  <h2 className="text-lg font-bold text-gray-900">Verification Failed</h2>
-                  <p className="text-sm text-red-500 mt-1">{otpError}</p>
-                </div>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => { setOtpStep("sending"); setOtpError(null); }}
-                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold"
-                  >
-                    Try Again
-                  </button>
-                  <button
-                    onClick={() => { setOtpStep("idle"); setIsSubmitting(false); }}
-                    className="w-full py-3 border border-gray-300 text-gray-700 rounded-xl font-bold"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+      {/* Order Summary */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200 mb-8">
+        <h2 className="font-bold text-lg mb-4 text-gray-800">Order Summary</h2>
+        {cartItems.map((item) => (
+          <div key={item.id} className="flex justify-between py-2 border-b border-gray-50 text-sm">
+            <span className="text-gray-600">{item.name} x{item.quantity}</span>
+            <span className="font-medium">{symbol}{item.price * item.quantity}</span>
+          </div>
+        ))}
+        <div className="mt-3 space-y-1.5">
+          <div className="flex justify-between py-1 text-sm"><span className="text-gray-500">Subtotal</span><span>{symbol}{subtotal}</span></div>
+          {deliveryOption === "delivery" && (
+            <div className="flex justify-between py-1 text-sm">
+              <span className="text-gray-500">Delivery</span>
+              <span>{effectiveDeliveryFee === 0 ? <span className="text-emerald-600 font-semibold">Free</span> : `${symbol}${effectiveDeliveryFee}`}</span>
+            </div>
+          )}
+          <div className="flex justify-between py-1 text-sm"><span className="text-gray-500">Tax</span><span className="font-medium">{symbol}{taxAmount}</span></div>
+          {couponDiscount > 0 && (
+            <div className="flex justify-between py-1 text-sm"><span className="text-green-600">Coupon Discount</span><span className="text-green-600 font-semibold">-{symbol}{couponDiscount}</span></div>
+          )}
+          {thirdPartyCharge > 0 && (
+            <div className="flex justify-between py-1 text-sm"><span className="text-amber-600">Extended delivery fee</span><span className="text-amber-600">{symbol}{thirdPartyCharge}</span></div>
+          )}
+          {totalSavings > 0 && (
+            <div className="flex justify-between py-1 text-xs"><span className="text-emerald-600">You saved</span><span className="text-emerald-600 font-semibold">{symbol}{totalSavings}</span></div>
+          )}
+          <div className="flex justify-between py-2 border-t border-gray-200 mt-2">
+            <span className="font-bold text-gray-800">Total</span>
+            <span className="font-black text-xl text-emerald-700">{symbol}{finalTotal}</span>
           </div>
         </div>
-      )}
+        <button onClick={placeOrder} disabled={isSubmitting || cartItems.length === 0}
+          className="mt-6 w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:from-emerald-700 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? <><Loader2 className="w-5 h-5 animate-spin inline mr-2" /> Placing Order...</> : `Place Order ${symbol}${finalTotal}`}
+        </button>
+      </div>
+
+      <PermissionGate />
     </div>
   );
 }

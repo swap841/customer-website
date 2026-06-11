@@ -58,6 +58,9 @@ interface ContactInfo {
   thirdPartyDeliveryCharge: number;
   workingHours: string;
   responseTime: string;
+  deliverySpeedKmph: number;
+  trafficMultiplier: number;
+  handlingTimeHours: number;
 }
 
 function configToContactInfo(cfg: AppConfig): ContactInfo {
@@ -120,6 +123,9 @@ function configToContactInfo(cfg: AppConfig): ContactInfo {
     thirdPartyDeliveryCharge: 25,
     workingHours: "9:00 AM - 9:00 PM",
     responseTime: "Average response time: 4 hours",
+    deliverySpeedKmph: 25,
+    trafficMultiplier: 1.5,
+    handlingTimeHours: 1,
   };
 }
 

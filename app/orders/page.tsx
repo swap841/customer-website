@@ -6,10 +6,10 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { collection, query, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import {
-  Package, Clock, Truck, CheckCircle2, AlertCircle, XCircle,
-  ChevronRight, Loader2, Hash, ShoppingBag, Calendar, ArrowLeft, ShieldCheck,
+  ShoppingBag, Loader2, ArrowLeft, XCircle,
 } from "lucide-react";
 import { useContactInfo } from "@/hooks/useContactInfo";
+import OrderCard from "@/components/OrderCard";
 import Link from "next/link";
 
 interface OrderItem {
@@ -29,19 +29,7 @@ interface Order {
   address?: { name: string };
 }
 
-const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: any }> = {
-  Pending: { color: "text-amber-700", bg: "bg-amber-100", icon: Clock },
-  Packing: { color: "text-orange-700", bg: "bg-orange-100", icon: Package },
-  "Ready to Dispatch": { color: "text-blue-700", bg: "bg-blue-100", icon: Package },
-  Assigned: { color: "text-indigo-700", bg: "bg-indigo-100", icon: Truck },
-  Accepted: { color: "text-teal-700", bg: "bg-teal-100", icon: Truck },
-  "Out for Delivery": { color: "text-cyan-700", bg: "bg-cyan-100", icon: Truck },
-  "Awaiting Verification": { color: "text-purple-700", bg: "bg-purple-100", icon: ShieldCheck },
-  Delivered: { color: "text-emerald-700", bg: "bg-emerald-100", icon: CheckCircle2 },
-  Cancelled: { color: "text-red-700", bg: "bg-red-100", icon: XCircle },
-};
-
-const PAGE_SIZE = 10;
+const CANCELLED_STATUSES = ["Cancelled"];
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -50,6 +38,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  const [tab, setTab] = useState<"current" | "history">("current");
   const { contactInfo } = useContactInfo();
   const symbol = contactInfo.currencySymbol || "\u20B9";
 
@@ -70,7 +59,6 @@ export default function OrdersPage() {
     const unsubscribe = onSnapshot(q, (snap) => {
       const items = snap.docs.map((d) => {
         const data = d.data();
-        const createdVal = data.createdAt || data.date;
         return {
           id: d.id,
           status: data.status || "Pending",
@@ -80,7 +68,7 @@ export default function OrdersPage() {
             quantity: i.quantity,
             price: i.price,
           })),
-          createdAt: createdVal,
+          createdAt: data.createdAt || data.date,
           estimatedDeliveryDate: data.estimatedDeliveryDate,
           payment: data.payment,
           address: data.deliveryAddress || data.address,
@@ -101,6 +89,15 @@ export default function OrdersPage() {
     return () => unsubscribe();
   }, [user]);
 
+  const currentOrders = orders.filter(o => !CANCELLED_STATUSES.includes(o.status) && o.status !== "Delivered");
+  const historyOrders = orders.filter(o => CANCELLED_STATUSES.includes(o.status) || o.status === "Delivered");
+
+  const handleRemoveOrder = (orderId: string) => {
+    const updatedOrders = orders.filter(o => o.id !== orderId);
+    setOrders(updatedOrders);
+    setTotalCount(updatedOrders.length);
+  };
+
   if (authChecking || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -114,25 +111,6 @@ export default function OrdersPage() {
     );
   }
 
-  const formatDate = (d: any) => {
-    if (!d) return "N/A";
-    try {
-      let dateObj: Date;
-      if (d?.toDate) {
-        dateObj = d.toDate();
-      } else if (d?.seconds) {
-        dateObj = new Date(d.seconds * 1000);
-      } else {
-        dateObj = new Date(d);
-      }
-      return dateObj.toLocaleDateString("en-IN", {
-        day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-      });
-    } catch {
-      return "N/A";
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white pb-12">
       <div className="max-w-3xl mx-auto px-4 py-6">
@@ -144,6 +122,25 @@ export default function OrdersPage() {
             <h1 className="text-2xl font-black text-zinc-900">My Orders</h1>
             <p className="text-sm text-zinc-500">{totalCount} order{totalCount !== 1 ? "s" : ""}</p>
           </div>
+        </div>
+
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setTab("current")}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition ${
+              tab === "current" ? "bg-emerald-600 text-white shadow-md" : "bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-50"
+            }`}
+          >
+            Current ({currentOrders.length})
+          </button>
+          <button
+            onClick={() => setTab("history")}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition ${
+              tab === "history" ? "bg-emerald-600 text-white shadow-md" : "bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-50"
+            }`}
+          >
+            History ({historyOrders.length})
+          </button>
         </div>
 
         {loading ? (
@@ -162,57 +159,35 @@ export default function OrdersPage() {
               Browse Products
             </Link>
           </div>
+        ) : tab === "current" ? (
+          currentOrders.length === 0 ? (
+            <div className="text-center py-16">
+              <ShoppingBag className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
+              <p className="text-sm text-zinc-500">No current orders</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {currentOrders.map((order) => (
+                <OrderCard key={order.id} order={order} symbol={symbol} onCancel={handleRemoveOrder} />
+              ))}
+            </div>
+          )
         ) : (
-          <div className="space-y-4">
-            {orders.map((order) => {
-              const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.Pending;
-              const StatusIcon = cfg.icon;
-              const itemSummary = order.items.slice(0, 3).map((i) => i.name).join(", ");
-              const extra = order.items.length > 3 ? ` +${order.items.length - 3} more` : "";
-
-              return (
-                <Link
-                  key={order.id}
-                  href={`/orders/${order.id}`}
-                  className="block bg-white rounded-2xl border border-zinc-100 p-5 hover:shadow-md hover:border-emerald-200 transition-all shadow-sm"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-9 h-9 rounded-xl ${cfg.bg} flex items-center justify-center`}>
-                        <StatusIcon className={`w-5 h-5 ${cfg.color}`} />
-                      </div>
-                      <div>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${cfg.bg} ${cfg.color}`}>
-                          {order.status}
-                        </span>
-                        <p className="text-[10px] text-zinc-400 mt-0.5 flex items-center gap-1">
-                          <Hash className="w-3 h-3" /> {order.id.slice(-8).toUpperCase()}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-zinc-300 shrink-0 mt-1" />
-                  </div>
-                  <p className="text-xs text-zinc-600 line-clamp-1 mb-2">{itemSummary}{extra}</p>
-                  <div className="flex items-center justify-between text-xs text-zinc-500">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1">
-                        {symbol}{order.totalAmount}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />{formatDate(order.createdAt)}
-                      </span>
-                    </div>
-                    {order.payment?.method && (
-                      <span className="text-[10px] uppercase font-bold text-zinc-400">{order.payment.method}</span>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-
-          </div>
+          historyOrders.length === 0 ? (
+            <div className="text-center py-16">
+              <XCircle className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
+              <p className="text-sm text-zinc-500">No order history</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {historyOrders.map((order) => (
+                <OrderCard key={order.id} order={order} symbol={symbol} />
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>
   );
 }
+
