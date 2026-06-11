@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Bell, MapPin, X, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   onClose?: () => void;
@@ -37,9 +38,10 @@ export default function PermissionGate({ onClose }: Props) {
     navigator.geolocation.getCurrentPosition(
       () => {
         setLocGranted(true);
-        setTimeout(() => window.location.reload(), 500);
       },
-      () => {}
+      () => {
+        toast?.error?.("GPS denied — you can enter coordinates manually in the Location section below.");
+      }
     );
   };
 
@@ -63,7 +65,7 @@ export default function PermissionGate({ onClose }: Props) {
       <button onClick={() => setDismissed(true)} className="absolute top-2 right-2 p-0.5 rounded hover:bg-amber-100">
         <X className="w-4 h-4 text-amber-400" />
       </button>
-      <p className="text-xs font-semibold text-amber-800 mb-3 pr-6">Enable optional features for a better experience:</p>
+      <p className="text-xs font-semibold text-amber-800 mb-3 pr-6">Enable optional features for a better experience — or enter coordinates manually during checkout:</p>
       <div className="flex flex-wrap gap-3">
         {locSupported && !locGranted && (
           <button onClick={requestLoc} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs text-amber-700 hover:bg-amber-100 transition font-medium">

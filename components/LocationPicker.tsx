@@ -38,6 +38,7 @@ export default function LocationPicker({
   const handleGetCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       toast.error("Geolocation is not supported by your browser");
+      setManualMode(true);
       return;
     }
     setIsLoading(true);
@@ -53,10 +54,11 @@ export default function LocationPicker({
       },
       (err) => {
         setIsLoading(false);
+        setManualMode(true);
         if (err.code === 1) {
-          toast.error("Location permission denied. Please enable it in your browser settings or enter manually.");
+          toast.error("GPS permission denied. Enter your coordinates manually below.");
         } else {
-          toast.error("Could not detect your location. Please try again or enter manually.");
+          toast.error("Could not detect location. Enter your coordinates manually below.");
         }
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
