@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebaseClient";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import ProductDetail from "@/components/ProductDetail";
 import { fetchConfig } from "@/lib/configFetcher";
 
@@ -39,7 +39,6 @@ export async function generateStaticParams() {
 
 async function getProductData(id: string): Promise<ProductData | null> {
   try {
-    const { doc, getDoc } = await import("firebase/firestore");
     const snap = await getDoc(doc(db, "products", id));
     if (!snap.exists()) return null;
     const data = snap.data();

@@ -89,7 +89,9 @@ export default function CategoriesPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {categories.map((cat) => {
             const displayName = cat.displayName || cat.name.charAt(0).toUpperCase() + cat.name.slice(1);
-            const imgSrc = cat.imageUrl || PLACEHOLDER_IMAGES[cat.name] || PLACEHOLDER_IMAGES[displayName] || "";
+            const imgSrc = (cat.imageUrl && !cat.imageUrl.startsWith('/images/'))
+              ? cat.imageUrl
+              : PLACEHOLDER_IMAGES[cat.name] || PLACEHOLDER_IMAGES[displayName] || "";
             return (
               <Link
                 key={cat.id}
