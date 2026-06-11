@@ -212,7 +212,9 @@ export default function CheckoutPageContent() {
         email: user.email,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
-    } catch (error) {}
+    } catch (error) {
+      console.error("Failed to save user profile:", error);
+    }
   };
 
   const applyCouponCode = async () => {
@@ -297,7 +299,7 @@ export default function CheckoutPageContent() {
         key: rzpKeyId,
         amount: Math.round(finalTotal * 100),
         currency: "INR",
-        name: "My Store Grocery",
+        name: contactInfo.storeName || "My Store Grocery",
         description: `Order Payment - INR ${finalTotal}`,
         order_id: data.id,
         handler: function (response: RazorpayResponse) {
@@ -466,7 +468,7 @@ export default function CheckoutPageContent() {
         await handleRazorpayPayment(orderData);
       } else {
         const batch = writeBatch(db);
-        const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const orderId = `order_${crypto.randomUUID().replace(/-/g, "").substring(0, 16)}`;
         const orderDataWithMeta = {
           ...orderData,
           id: orderId,
@@ -549,6 +551,9 @@ export default function CheckoutPageContent() {
         <div className="grid grid-cols-2 gap-4">
           {(["delivery", "pickup"] as const).map((opt) => (
             <div key={opt}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDeliveryOption(opt); } }}
               className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${
                 deliveryOption === opt
                   ? `${opt === "delivery" ? "border-emerald-500 bg-emerald-50" : "border-blue-500 bg-blue-50"} shadow-md`

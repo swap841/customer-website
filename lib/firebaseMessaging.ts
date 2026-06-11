@@ -49,7 +49,7 @@ export async function requestFcmToken(uid: string): Promise<string | null> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: uid, token }),
       });
-      console.log("[FCM] Token registered for user:", uid);
+      console.log("[FCM] Token registered");
     }
     
     return token;

@@ -119,6 +119,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           <button
             onClick={handleWishlist}
+            aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
             className="absolute top-2 right-2 z-10 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow hover:bg-white transition"
           >
             <Heart
@@ -166,6 +167,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 {quantity === 0 ? (
                   <button
                     onClick={handleAddToCart}
+                    aria-label={`Add ${product.name} to cart`}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-full transition-all active:scale-95"
                   >
                     <ShoppingCart className="w-5 h-5" />

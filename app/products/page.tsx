@@ -47,10 +47,6 @@ async function getCategories(): Promise<CategoryData[]> {
   }
 }
 
-export async function generateStaticParams() {
-  return [{ page: "1" }, { page: "2" }, { page: "3" }];
-}
-
 async function getProducts(category?: string, pageSize = 20): Promise<ProductData[]> {
   try {
     let q = query(collection(db, "products"), where("active", "==", true), fLimit(pageSize));

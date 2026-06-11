@@ -95,6 +95,7 @@ export default function ChatBot() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
+          aria-label="Open chat assistant"
           className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
         >
           <MessageCircle className="w-6 h-6" />
@@ -108,7 +109,7 @@ export default function ChatBot() {
               <Bot className="w-5 h-5 text-white" />
               <span className="text-sm font-bold text-white">AI Assistant</span>
             </div>
-            <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white transition">
+            <button onClick={() => setOpen(false)} aria-label="Close chat" className="text-white/80 hover:text-white transition">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -159,6 +160,7 @@ export default function ChatBot() {
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || loading}
+                aria-label="Send message"
                 className="shrink-0 w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

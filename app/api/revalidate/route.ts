@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { paths, tags, secret } = body;
 
-    if (secret !== process.env.REVALIDATE_SECRET) {
+    if (!process.env.REVALIDATE_SECRET || secret !== process.env.REVALIDATE_SECRET) {
       return NextResponse.json({ error: "Invalid secret" }, { status: 401 });
     }
 

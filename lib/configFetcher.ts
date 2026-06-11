@@ -23,15 +23,13 @@ export async function fetchConfig(): Promise<StoreConfig> {
       const remote = await res.json();
       if (remote && typeof remote === "object") {
         cachedConfig = mergeWithDefaults(remote);
-        console.log("[Build] Config fetched from server successfully");
         return cachedConfig;
       }
     }
-  } catch (err) {
-    console.warn("[Build] Failed to fetch config from server, using defaults:", err);
+  } catch {
+    // Config fetch failed — fall through to defaults
   }
 
-  console.log("[Build] Using default config");
   return defaultConfig;
 }
 

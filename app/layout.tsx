@@ -24,20 +24,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "My Store Grocery - Fresh Groceries Delivered",
-    template: "%s | My Store Grocery",
-  },
-  description:
-    "Order fresh groceries online. Get same-day delivery of fruits, vegetables, dairy, and more.",
-  openGraph: {
-    type: "website",
-    locale: "en_IN",
-    siteName: "My Store Grocery",
-  },
-  robots: { index: true, follow: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await fetchConfig();
+  const name = config.storeName || "My Store Grocery";
+  return {
+    title: {
+      default: `${name} - Fresh Groceries Delivered`,
+      template: `%s | ${name}`,
+    },
+    description: config.aboutText || `Order fresh groceries online from ${name}. Get same-day delivery of fruits, vegetables, dairy, and more.`,
+    openGraph: {
+      type: "website",
+      locale: "en_IN",
+      siteName: name,
+      title: name,
+      description: config.aboutText || `Order fresh groceries online from ${name}.`,
+    },
+    robots: { index: true, follow: true },
+  };
+}
 
 export default async function RootLayout({
   children,

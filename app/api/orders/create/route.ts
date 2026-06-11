@@ -10,17 +10,22 @@ export async function POST(req: NextRequest) {
 
     const { userId, orderData, couponCode } = await req.json();
 
-    if (!userId || !orderData) {
-      return NextResponse.json({ success: false, error: "Missing user or order data" }, { status: 400 });
+    if (!orderData) {
+      return NextResponse.json({ success: false, error: "Missing order data" }, { status: 400 });
+    }
+
+    const uid = auth.uid;
+    if (!uid) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     if (!isAdminReady()) {
       return NextResponse.json({ success: false, error: "Server not configured" }, { status: 500 });
     }
 
-    const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const orderId = `order_${crypto.randomUUID().replace(/-/g, "").substring(0, 16)}`;
     const fullOrder = {
-      ...orderData, id: orderId,
+      ...orderData, id: orderId, userId: uid,
       payment: { method: "cod", status: "pending" },
       status: "Pending",
       createdAt: new Date().toISOString(),
@@ -28,10 +33,10 @@ export async function POST(req: NextRequest) {
     };
 
     const writes: WriteOp[] = [
-      { operation: "set", collection: `users/${userId}/orders`, docId: orderId, data: fullOrder },
+      { operation: "set", collection: `users/${uid}/orders`, docId: orderId, data: fullOrder },
       { operation: "create", collection: "payments", data: {
         method: "cod", status: "pending", amount: orderData.totalAmount || 0,
-        currency: "INR", userId, orderId, createdAt: new Date().toISOString(),
+        currency: "INR", userId: uid, orderId, createdAt: new Date().toISOString(),
       }},
     ];
 
